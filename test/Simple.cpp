@@ -3,31 +3,9 @@
 
 using namespace Eigen;
 
-TEST_CASE("Ixaru potential vertical", "[ixaru]") {
-    Schrodinger2D s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
-                    Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
-                    Options{
-                            .gridSize={.x=28, .y=30},
-                            .maxBasisSize=12
-                    });
-
-    s.eigenvalues();
-}
-
-TEST_CASE("Ixaru potential horizontal", "[ixaru]") {
-    Schrodinger2D s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
-                    Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
-                    Options{
-                            .gridSize={.x=30, .y=28},
-                            .maxBasisSize=16
-                    });
-
-    s.eigenvalues();
-}
-
 TEST_CASE("On a disc", "[disc]") {
     Schrodinger2D s([](double, double) { return 0; },
-                    Circle<double>(std::array<double, 2>{0., 0.}, 1),
+                    Sphere<double, 2>({0., 0.}, 1),
                     Options{
                             .gridSize={.x=28, .y=30},
                             .maxBasisSize=12
@@ -49,8 +27,8 @@ TEST_CASE("On a disc", "[disc]") {
 TEST_CASE("On two disc", "[disc]") {
     Schrodinger2D s([](double, double) { return 0; },
                     Union<double, 2>{
-                            Circle<double>(std::array<double, 2>{-3.5, 0.}, 4),
-                            Circle<double>(std::array<double, 2>{3.5, 0.}, 4),
+                            Sphere<double, 2>({-3.5, 0.}, 4),
+                            Sphere<double, 2>({3.5, 0.}, 4),
                     },
                     Options{
                             .gridSize={.x=60, .y=60},

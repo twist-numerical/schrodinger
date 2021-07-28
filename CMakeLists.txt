@@ -8,9 +8,9 @@ set(CMAKE_CXX_STANDARD 17)
 
 if (MSVC)
     add_compile_options(/W4 /WX)
-else()
+else ()
     add_compile_options(-Wall -Wextra -Werror -Wno-missing-field-initializers)
-endif()
+endif ()
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 message("-- Eigen3 version ${Eigen3_VERSION}")
@@ -36,7 +36,7 @@ set(libraries ${libraries} matslise)
 target_link_libraries(schrodinger PUBLIC ${libraries})
 
 add_executable(schrodinger_test
-        test/Simple.cpp
+        test/Simple.cpp test/ixaru.cpp
         test/main.cpp)
 
 target_link_libraries(schrodinger_test PRIVATE schrodinger ${libraries})
@@ -47,7 +47,7 @@ add_test(NAME schrodinger_test COMMAND schrodinger_test)
 
 if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/lib/pybind11)
     add_subdirectory(lib/pybind11)
-else()
+else ()
     find_package(pybind11 QUIET)
 endif ()
 

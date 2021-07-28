@@ -87,7 +87,7 @@ Schrodinger2D::Schrodinger2D(const function<double(double, double)> &_V,
         Index i = 0;
 // #pragma omp parallel for ordered schedule(dynamic, 1) collapse(2)
         for (double &x : IterateEigen(grid.x)) {
-            for (auto &dom : domain->intersections(1, {x, 0})) {
+            for (auto &dom : domain->intersections({{x, 0}, Vector<double, 2>::Unit(1)})) {
                 Thread thread = computeThread([this, x](double y) -> double { return V(x, y) / 2; },
                                               dom.first, dom.second,
                                               (size_t) options.maxBasisSize,
@@ -128,7 +128,7 @@ Schrodinger2D::Schrodinger2D(const function<double(double, double)> &_V,
         Index i = 0;
 // #pragma omp parallel for schedule(dynamic, 1) collapse(2)
         for (double &y : IterateEigen(grid.y)) {
-            for (auto &dom : domain->intersections(0, {0, y})) {
+            for (auto &dom : domain->intersections({{0, y}, Vector<double, 2>::Unit(0)})) {
                 Thread thread = computeThread([this, y](double x) -> double { return V(x, y) / 2; },
                                               dom.first, dom.second,
                                               (size_t) options.maxBasisSize,

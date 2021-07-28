@@ -5,14 +5,15 @@
 #include <vector>
 #include <cmath>
 #include "util/polymorphic_value.h"
+#include "util/geometry.h"
 
 template<class Scalar, int d>
 class Domain {
 public:
-    virtual bool contains(const std::array<Scalar, d> &point) const = 0;
+    virtual bool contains(const Vector<Scalar, d> &point) const = 0;
 
     virtual std::vector<std::pair<Scalar, Scalar>>
-    intersections(int axis, const std::array<Scalar, d> &point) const = 0;
+    intersections(const Ray<Scalar, d> &) const = 0;
 
     virtual Scalar min(int axis) const = 0;
 
@@ -48,7 +49,7 @@ public:
         };
     }
 
-    virtual bool contains(const std::array<Scalar, d> &point) const override {
+    virtual bool contains(const Vector<Scalar, d> &point) const override {
         for (auto &dom : subDomains)
             if (dom->contains(point))
                 return true;
@@ -56,14 +57,14 @@ public:
     }
 
     virtual std::vector<std::pair<Scalar, Scalar>>
-    intersections(int axis, const std::array<Scalar, d> &point) const override {
+    intersections(const Ray<Scalar, d> &ray) const override {
         typedef struct {
             Scalar point;
             bool isStart;
         } Point;
         std::vector<Point> points;
         for (auto &dom : subDomains)
-            for (auto &sec : dom->intersections(axis, point)) {
+            for (auto &sec : dom->intersections(ray)) {
                 points.push_back({.point=sec.first, .isStart=true});
                 points.push_back({.point=sec.second, .isStart=false});
             }
@@ -116,19 +117,57 @@ public:
             sizeof...(T) == 2 * d && (std::is_convertible<T, Scalar>::value && ...)>::type>
     constexpr Rectangle(T... bounds) : bounds({bounds...}) {}
 
-    virtual bool contains(const std::array<Scalar, d> &point) const override {
+    virtual bool contains(const Vector<Scalar, d> &point) const override {
         for (int i = 0; i < d; ++i)
             if (point[i] <= bounds[2 * i] || point[i] >= bounds[2 * i + 1])
                 return false;
         return true;
     }
 
-    virtual std::vector<std::pair<Scalar, Scalar>>
-    intersections(int axis, const std::array<Scalar, d> &point) const override {
+    bool withinSide(const Vector<Scalar, d> &point, int axis) const {
         for (int i = 0; i < d; ++i)
             if (i != axis && (point[i] <= bounds[2 * i] || point[i] >= bounds[2 * i + 1]))
-                return {};
-        return {{bounds[2 * axis], bounds[2 * axis + 1]}};
+                return false;
+        return true;
+    }
+
+    virtual std::vector<std::pair<Scalar, Scalar>>
+    intersections(const Ray<Scalar, d> &ray) const override {
+        typedef Vector<Scalar, d> V;
+        Scalar low = std::numeric_limits<Scalar>::infinity();
+        Scalar high = -low;
+
+        V min = this->min();
+        V max = this->max();
+
+        bool intersecting = false;
+        for (int i = 0; i < d; ++i) {
+            for (const V &corner: {min, max}) {
+                Scalar a = ray.cast({corner, V::Unit(i)});
+                if (withinSide(ray(a), i)) {
+                    low = std::min(a, low);
+                    high = std::max(a, high);
+                    intersecting = true;
+                }
+            }
+        }
+        if (!intersecting || high - low < 1e-9)
+            return {};
+        return {{low, high}};
+    }
+
+    Vector<Scalar, d> min() const {
+        Vector<Scalar, d> v;
+        for (int i = 0; i < d; ++i)
+            v[i] = min(i);
+        return v;
+    }
+
+    Vector<Scalar, d> max() const {
+        Vector<Scalar, d> v;
+        for (int i = 0; i < d; ++i)
+            v[i] = max(i);
+        return v;
     }
 
     virtual Scalar min(int axis) const override {
@@ -144,30 +183,36 @@ public:
     };
 };
 
-template<class Scalar>
-class Circle : public Domain<Scalar, 2> {
+template<class Scalar, int d>
+class Sphere : public Domain<Scalar, d> {
 private:
-    Scalar radius = 1;
-    std::array<Scalar, 2> center = {0, 0};
+    Scalar radius;
+    Vector<Scalar, d> center;
 public:
-    explicit constexpr Circle(Scalar radius = 1) : radius(radius), center({0, 0}) {};
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
-    explicit constexpr Circle(const std::array<Scalar, 2> &center, Scalar radius = 1)
+    explicit constexpr Sphere(Scalar radius = 1) : radius(radius), center(Vector<Scalar, d>::Zero()) {};
+
+    explicit constexpr Sphere(const Vector<Scalar, d> &center, Scalar radius = 1)
             : radius(radius), center(center) {};
 
-    virtual bool contains(const std::array<Scalar, 2> &point) const override {
-        Scalar dx = point[0] - center[0], dy = point[1] - center[1];
-        return dx * dx + dy * dy < radius * radius;
+    virtual bool contains(const Vector<Scalar, d> &point) const override {
+        Vector<Scalar, d> p = point - center;
+        return p.dot(p) < radius * radius;
     }
 
     virtual std::vector<std::pair<Scalar, Scalar>>
-    intersections(int axis, const std::array<Scalar, 2> &point) const override {
-        double p = point[1 - axis] - center[1 - axis];
-        if (std::abs(p) >= radius)
-            return {};
+    intersections(const Ray<Scalar, d> &ray) const override {
+        typedef Vector<Scalar, d> V;
 
-        Scalar s = std::sqrt(radius * radius - p * p);
-        return {{center[axis] - s, center[axis] + s}};
+        V o = ray.origin - center;
+        Scalar a = ray.direction.dot(ray.direction), b = 2 * o.dot(ray.direction), c = o.dot(o) - radius * radius;
+        Scalar D = b * b - 4 * a * c;
+        if (D < 1e-12)
+            return {};
+        D = std::sqrt(D);
+        a *= 2;
+        return {{(-b - D) / a, (-b + D) / a}};
     }
 
     virtual Scalar min(int axis) const override {
@@ -178,8 +223,8 @@ public:
         return center[axis] + radius;
     }
 
-    virtual Circle *clone() const override {
-        return new Circle(*this);
+    virtual Sphere *clone() const override {
+        return new Sphere(*this);
     };
 };
 
