@@ -1,0 +1,63 @@
+name: Build and test schrodinger2d
+
+on: [ push ]
+
+jobs:
+  schrodinger2d_test:
+    name: Test schrodinger2d
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-2019, ubuntu-20.04, macos-11.0 ]
+    steps:
+      - name: Cache Eigen3
+        id: cache-eigen3_3
+        uses: actions/cache@v1
+        with:
+          path: ../eigen
+          key: ${{ runner.os }}-eigen3_3
+      - name: Download Eigen3
+        if: steps.cache-eigen3_3.outputs.cache-hit != 'true'
+        run: |
+          git clone https://gitlab.com/libeigen/eigen.git ../eigen
+          cd ../eigen
+          git checkout 3.3
+          mkdir ../eigen/build
+      - if: ${{startsWith(matrix.os, 'windows') && steps.cache-eigen3_3.outputs.cache-hit != 'true'}}
+        name: Build Eigen3 (Windows)
+        run: cmake -G "MinGW Makefiles" ..
+        working-directory: ../eigen/build
+      - if: ${{!startsWith(matrix.os, 'windows') && steps.cache-eigen3_3.outputs.cache-hit != 'true'}}
+        name: Build Eigen3 (not Windows)
+        run: cmake ..
+        working-directory: ../eigen/build
+      - run: mkdir build
+      - if: ${{startsWith(matrix.os, 'windows')}}
+        name: CMake (Windows)
+        run: |
+          cmake -G "MinGW Makefiles" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF `
+            -DEigen3_DIR="$(resolve-path ../../eigen/build)" `
+            ..
+          cmake --build . --target schrodinger_test --config Release
+        working-directory: ./build
+        env:
+          CXXFLAGS: "-DMS_WIN64=1 -D_hypot=hypot -static-libgcc -static"
+          LDFLAGS: "-static"
+      - if: ${{!startsWith(matrix.os, 'windows')}}
+        name: CMake (not Windows)
+        run: |
+          cmake .. -DCMAKE_BUILD_TYPE=Release \
+            -DEigen3_DIR="$(pwd)/../../eigen/build"
+          cmake --build . --target schrodinger_test --config Release -- -j 3
+        working-directory: ./build
+      - uses: actions/upload-artifact@v2-preview
+        with:
+          name: pyslise_${{ matrix.os }}_${{ matrix.python-version }}
+          path: ./build/matslise/dist/*.whl
+      - name: Run tests
+        run: |
+          ./matslise_test
+        working-directory: ./build/test
