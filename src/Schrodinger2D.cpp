@@ -6,7 +6,7 @@
 #include <chrono>
 
 void tic(int mode = 0) {
-    static std::chrono::_V2::system_clock::time_point t_start;
+    static std::chrono::system_clock::time_point t_start;
 
     if (mode == 0)
         t_start = std::chrono::high_resolution_clock::now();
