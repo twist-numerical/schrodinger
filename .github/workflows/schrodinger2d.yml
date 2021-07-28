@@ -56,11 +56,7 @@ jobs:
             -DEigen3_DIR="$(pwd)/../../eigen/build"
           cmake --build . --target schrodinger_test --config Release -- -j 3
         working-directory: ./build
-      - uses: actions/upload-artifact@v2-preview
-        with:
-          name: pyslise_${{ matrix.os }}_${{ matrix.python-version }}
-          path: ./build/matslise/dist/*.whl
       - name: Run tests
         run: |
-          ./matslise_test
+          ./schrodinger_test
         working-directory: ./build/test
