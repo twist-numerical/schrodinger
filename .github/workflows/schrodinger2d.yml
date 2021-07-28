@@ -59,4 +59,4 @@ jobs:
       - name: Run tests
         run: |
           ./schrodinger_test
-        working-directory: ./build/test
+        working-directory: ./build
