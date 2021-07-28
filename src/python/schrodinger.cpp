@@ -4,7 +4,7 @@
 #include <pybind11/eigen.h>
 #include <pybind11/numpy.h>
 
-#include "../Schrodinger2D.h"
+#include "../schrodinger2d.h"
 
 namespace py = pybind11;
 

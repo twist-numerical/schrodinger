@@ -2,7 +2,7 @@
 #define SCHRODINGER2D_SCHRODINGER_H
 
 #include "catch.hpp"
-#include "../src/Schrodinger2D.h"
+#include "../src/schrodinger2d.h"
 #include <vector>
 
 inline void checkEigenvalues(const std::vector<double> &expected, const std::vector<double> &found, double tolerance = 1e-8) {

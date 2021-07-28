@@ -17,7 +17,7 @@ message("-- Eigen3 version ${Eigen3_VERSION}")
 set(libraries Eigen3::Eigen)
 
 SET(SCHRODINGER_SRC
-        src/Schrodinger2D.cpp)
+        src/schrodinger2d.cpp)
 
 add_library(schrodinger ${SCHRODINGER_SRC})
 

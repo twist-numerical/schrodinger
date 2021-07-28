@@ -1,7 +1,9 @@
 #include "catch.hpp"
-#include "../src/Schrodinger2D.h"
+#include "../src/schrodinger2d.h"
 
 using namespace Eigen;
+using namespace schrodinger;
+using namespace schrodinger::geometry;
 
 TEST_CASE("On a disc", "[disc]") {
     Schrodinger2D s([](double, double) { return 0; },

@@ -1,6 +1,8 @@
 #include "schrodinger.h"
 
 using namespace Eigen;
+using namespace schrodinger;
+using namespace schrodinger::geometry;
 
 std::vector<double> expected{
         3.1959181, 5.5267439, 5.5267439, 7.5578033, 8.0312723,
