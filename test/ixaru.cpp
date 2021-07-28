@@ -4,7 +4,7 @@ using namespace Eigen;
 using namespace schrodinger;
 using namespace schrodinger::geometry;
 
-std::vector<double> expected{
+const std::vector<double> expected{
         3.1959181, 5.5267439, 5.5267439, 7.5578033, 8.0312723,
         8.4445814, 9.9280611, 9.9280611, 11.3118171, 11.3118171,
         12.1032536, 12.2011790, 13.3323313

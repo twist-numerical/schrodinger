@@ -5,19 +5,6 @@
 #include "util/right_kernel.h"
 #include <chrono>
 
-void tic(int mode = 0) {
-    static std::chrono::system_clock::time_point t_start;
-
-    if (mode == 0)
-        t_start = std::chrono::high_resolution_clock::now();
-    else {
-        auto t_end = std::chrono::high_resolution_clock::now();
-        std::cout << "Elapsed time is " << (t_end - t_start).count() * 1E-9 << " seconds\n";
-    }
-}
-
-void toc() { tic(1); }
-
 using namespace std;
 using namespace matslise;
 using namespace Eigen;
@@ -73,124 +60,118 @@ computeThread(const std::function<double(double)> &V, double min, double max, si
 Schrodinger2D::Schrodinger2D(const function<double(double, double)> &_V,
                              const Domain<double, 2> &_domain,
                              const Options &_options)
-        : V(_V), domain(polymorphic_value<Domain < double, 2>>
+        : V(_V), domain(polymorphic_value<Domain<double, 2>>
 
-(_domain.
+                                (_domain.
 
-clone(), Domain<double, 2>::copy()
+                                        clone(), Domain<double, 2>::copy()
 
-)),
-options(_options) {
-        tic();
+                                )),
+          options(_options) {
+    grid.x = ArrayXd::LinSpaced(options.gridSize.x + 2, domain->min(0), domain->max(0))
+            .segment(1, options.gridSize.x);
+    grid.y = ArrayXd::LinSpaced(options.gridSize.y + 2, domain->min(1), domain->max(1))
+            .segment(1, options.gridSize.y);
 
-
-        grid.x = ArrayXd::LinSpaced(options.gridSize.x + 2, domain->min(0), domain->max(0))
-        .segment(1, options.gridSize.x);
-        grid.y = ArrayXd::LinSpaced(options.gridSize.y + 2, domain->min(1), domain->max(1))
-        .segment(1, options.gridSize.y);
-
-        {
-            columns.x = 0;
-            Index i = 0;
+    {
+        columns.x = 0;
+        Index i = 0;
 // #pragma omp parallel for ordered schedule(dynamic, 1) collapse(2)
-            for (double &x : IterateEigen(grid.x)) {
-                for (auto &dom : domain->intersections({{x, 0}, Vector<double, 2>::Unit(1)})) {
-                    Thread thread = computeThread([this, x](double y) -> double { return V(x, y) / 2; },
-                                                  dom.first, dom.second,
-                                                  (size_t) options.maxBasisSize,
-                                                  grid.y, columns.x);
+        for (double &x : IterateEigen(grid.x)) {
+            for (auto &dom : domain->intersections({{x, 0}, Vector<double, 2>::Unit(1)})) {
+                Thread thread = computeThread([this, x](double y) -> double { return V(x, y) / 2; },
+                                              dom.first, dom.second,
+                                              (size_t) options.maxBasisSize,
+                                              grid.y, columns.x);
 // #pragma ordered
-                    thread.value = x;
-                    thread.valueIndex = i;
-                    if (thread.gridLength > 0)
-                        threads.x.push_back(thread);
-                }
-                i++;
+                thread.value = x;
+                thread.valueIndex = i;
+                if (thread.gridLength > 0)
+                    threads.x.push_back(thread);
             }
+            i++;
         }
+    }
 
-        size_t intersectionCount = 0;
-        for (const Thread &t : threads.x)
+    size_t intersectionCount = 0;
+    for (const Thread &t : threads.x)
         intersectionCount += t.gridLength;
 
-        intersections.reserve(intersectionCount);
+    intersections.reserve(intersectionCount);
 
-        for (const Thread &t : threads.x) {
+    for (const Thread &t : threads.x) {
+        MatrixXd onGrid(t.gridLength, t.eigenpairs.size());
+        ArrayXd subGrid = grid.y.segment(t.gridOffset, t.gridLength);
+        Index j = 0;
+        for (auto &Ef : t.eigenpairs)
+            onGrid.col(j++) = get<1>(Ef)(subGrid).unaryExpr([](const Y<> y) -> double { return y.y()[0]; });
+        for (Index i = 0; i < t.gridLength; ++i) {
+            intersections.emplace_back(Intersection{
+                    .position={.x=t.value, .y= grid.y[t.gridOffset + i]},
+                    .thread={.x = &t, .y = nullptr},
+                    .evaluation={.x = onGrid.row(i)},
+            });
+        }
+    }
+
+    {
+        columns.y = 0;
+        Index i = 0;
+// #pragma omp parallel for schedule(dynamic, 1) collapse(2)
+        for (double &y : IterateEigen(grid.y)) {
+            for (auto &dom : domain->intersections({{0, y}, Vector<double, 2>::Unit(0)})) {
+                Thread thread = computeThread([this, y](double x) -> double { return V(x, y) / 2; },
+                                              dom.first, dom.second,
+                                              (size_t) options.maxBasisSize,
+                                              grid.x, columns.y);
+                thread.value = y;
+                thread.valueIndex = i;
+// #pragma ordered
+                threads.y.push_back(thread);
+            }
+            i++;
+        }
+    }
+
+    {
+        std::vector<Intersection *> intersectionsByY;
+        intersectionsByY.reserve(intersections.size());
+        for (Intersection &i : intersections)
+            intersectionsByY.push_back(&i);
+        std::sort(intersectionsByY.begin(), intersectionsByY.end(),
+                  [](const Intersection *a, const Intersection *b) {
+                      if (a->position.y == b->position.y)
+                          return a->position.x < b->position.x;
+                      return a->position.y < b->position.y;
+                  });
+        auto intersection = intersectionsByY.begin();
+        for (Thread &t : threads.y) {
             MatrixXd onGrid(t.gridLength, t.eigenpairs.size());
-            ArrayXd subGrid = grid.y.segment(t.gridOffset, t.gridLength);
+            ArrayXd subGrid = grid.x.segment(t.gridOffset, t.gridLength);
             Index j = 0;
             for (auto &Ef : t.eigenpairs)
                 onGrid.col(j++) = get<1>(Ef)(subGrid).unaryExpr([](const Y<> y) -> double { return y.y()[0]; });
             for (Index i = 0; i < t.gridLength; ++i) {
-                intersections.emplace_back(Intersection{
-                        .position={.x=t.value, .y= grid.y[t.gridOffset + i]},
-                        .thread={.x = &t, .y = nullptr},
-                        .evaluation={.x = onGrid.row(i)},
-                });
+                assert((**intersection).position.x == grid.x[t.gridOffset + i] &&
+                       (**intersection).position.y == t.value);
+                (**intersection).thread.y = &t;
+                (**intersection).evaluation.y = onGrid.row(i);
+                ++intersection;
             }
         }
+    }
 
-        {
-            columns.y = 0;
-            Index i = 0;
-// #pragma omp parallel for schedule(dynamic, 1) collapse(2)
-            for (double &y : IterateEigen(grid.y)) {
-                for (auto &dom : domain->intersections({{0, y}, Vector<double, 2>::Unit(0)})) {
-                    Thread thread = computeThread([this, y](double x) -> double { return V(x, y) / 2; },
-                                                  dom.first, dom.second,
-                                                  (size_t) options.maxBasisSize,
-                                                  grid.x, columns.y);
-                    thread.value = y;
-                    thread.valueIndex = i;
-// #pragma ordered
-                    threads.y.push_back(thread);
-                }
-                i++;
-            }
+    {
+        tiles.resize(options.gridSize.x + 1, options.gridSize.y + 1);
+        for (auto &intersection : intersections) {
+            Index i = intersection.thread.x->valueIndex;
+            Index j = intersection.thread.y->valueIndex;
+            tiles(i + 1, j + 1).intersections[0] = &intersection;
+            tiles(i, j + 1).intersections[1] = &intersection;
+            tiles(i + 1, j).intersections[2] = &intersection;
+            tiles(i, j).intersections[3] = &intersection;
         }
-
-        {
-            std::vector<Intersection *> intersectionsByY;
-            intersectionsByY.reserve(intersections.size());
-            for (Intersection &i : intersections)
-                intersectionsByY.push_back(&i);
-            std::sort(intersectionsByY.begin(), intersectionsByY.end(),
-                      [](const Intersection *a, const Intersection *b) {
-                          if (a->position.y == b->position.y)
-                              return a->position.x < b->position.x;
-                          return a->position.y < b->position.y;
-                      });
-            auto intersection = intersectionsByY.begin();
-            for (Thread &t : threads.y) {
-                MatrixXd onGrid(t.gridLength, t.eigenpairs.size());
-                ArrayXd subGrid = grid.x.segment(t.gridOffset, t.gridLength);
-                Index j = 0;
-                for (auto &Ef : t.eigenpairs)
-                    onGrid.col(j++) = get<1>(Ef)(subGrid).unaryExpr([](const Y<> y) -> double { return y.y()[0]; });
-                for (Index i = 0; i < t.gridLength; ++i) {
-                    assert((**intersection).position.x == grid.x[t.gridOffset + i] &&
-                           (**intersection).position.y == t.value);
-                    (**intersection).thread.y = &t;
-                    (**intersection).evaluation.y = onGrid.row(i);
-                    ++intersection;
-                }
-            }
-        }
-
-        {
-            tiles.resize(options.gridSize.x + 1, options.gridSize.y + 1);
-            for (auto &intersection : intersections) {
-                Index i = intersection.thread.x->valueIndex;
-                Index j = intersection.thread.y->valueIndex;
-                tiles(i + 1, j + 1).intersections[0] = &intersection;
-                tiles(i, j + 1).intersections[1] = &intersection;
-                tiles(i + 1, j).intersections[2] = &intersection;
-                tiles(i, j).intersections[3] = &intersection;
-            }
-        }
-
-        toc();
-        cout << "matslise done\n" << endl;
+    }
 }
 
 template<bool withEigenfunctions>
@@ -205,7 +186,6 @@ eigenpairs(const Schrodinger2D *self) {
     MatrixXd beta_x = MatrixXd::Zero(rows, colsX);
     MatrixXd beta_y = MatrixXd::Zero(rows, colsY);
 
-    tic();
     size_t row = 0;
     for (const Schrodinger2D::Intersection &intersection : self->intersections) {
         beta_x.row(row).segment(
@@ -232,19 +212,11 @@ eigenpairs(const Schrodinger2D *self) {
         for (auto &ef : y.eigenpairs)
             lambda_y(offset++) = get<0>(ef);
     }
-    toc();
-    cout << "beta and lambda constructed\n" << endl;
 
-    tic();
     MatrixXd crossingsMatch(rows, colsX + colsY);
     crossingsMatch << beta_x, -beta_y;
     MatrixXd kernel = schrodinger::internal::rightKernel<MatrixXd>(crossingsMatch, 1e-3);
-    Index kernelSize = kernel.cols();
-    toc();
-    cout << "Kernel found of " << rows << "x" << (colsX + colsY) << " matrix. Kernel size: " << kernelSize << "\n"
-         << endl;
 
-    tic();
     MatrixXd A(rows, colsX + colsY); // rows x (colsX + colsY)
     A << beta_x * lambda_x.asDiagonal(), beta_y * lambda_y.asDiagonal();
 
@@ -253,12 +225,8 @@ eigenpairs(const Schrodinger2D *self) {
                   : beta_x * kernel.topRows(colsX);
 
     MatrixXd T = (BK.transpose() * BK).ldlt().solve(BK.transpose() * A * kernel);
-    toc();
-    cout << "A, BK and T constructed\n" << endl;
-
 
     if constexpr(withEigenfunctions) {
-        tic();
         EigenSolver<MatrixXd> solver(T, true);
         const VectorXcd &values = solver.eigenvalues();
         MatrixXcd vectors = solver.eigenvectors();
@@ -271,18 +239,13 @@ eigenpairs(const Schrodinger2D *self) {
                     values[i].real(),
                     Schrodinger2D::Eigenfunction(self, values[i].real(), kernel * vectors.col(i).real())
             );
-        toc();
-        cout << "Eigenfunctions: " << eigenfunctions.size() << "\n" << endl;
         return eigenfunctions;
-
     } else {
-        tic();
         ArrayXd values = T.eigenvalues().array().real();
         std::sort(values.data(), values.data() + values.size());
         std::vector<double> eigenvalues(values.size());
         std::copy(values.data(), values.data() + values.size(), eigenvalues.begin());
-        toc();
-        cout << "Eigenvalues: " << values.transpose() << "\n" << endl;
+
         return eigenvalues;
     }
 }
