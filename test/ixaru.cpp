@@ -18,7 +18,7 @@ TEST_CASE("Ixaru potential vertical", "[ixaru]") {
                             Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
                             Options{
                                     .gridSize={.x=28, .y=30},
-                                    .maxBasisSize=14
+                                    .maxBasisSize=18
                             });
 
     checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
@@ -29,7 +29,7 @@ TEST_CASE("Ixaru potential horizontal", "[ixaru]") {
                             Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
                             Options{
                                     .gridSize={.x=30, .y=28},
-                                    .maxBasisSize=16
+                                    .maxBasisSize=18
                             });
 
     checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);

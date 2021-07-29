@@ -12,15 +12,14 @@ set(BUILD_SHARED_LIBS ON)
 if (MSVC)
     add_compile_options(/W4 /WX)
 else ()
-    add_compile_options(-Wall -Wextra -Werror -Wno-missing-field-initializers)
+    add_compile_options(-Wall -Wextra -Werror -Wpedantic -Wno-missing-field-initializers -Wno-c++20-designator)
 endif ()
 
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 message("-- Eigen3 version ${Eigen3_VERSION}")
 set(libraries Eigen3::Eigen)
 
-SET(SCHRODINGER_SRC
-        src/schrodinger2d.cpp)
+SET(SCHRODINGER_SRC src/schrodinger2d.cpp)
 
 add_library(schrodinger ${SCHRODINGER_SRC})
 
