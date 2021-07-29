@@ -54,27 +54,30 @@ enable_testing()
 add_test(NAME schrodinger_test COMMAND schrodinger_test)
 
 
-if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/lib/pybind11)
-    add_subdirectory(lib/pybind11)
-else ()
-    find_package(pybind11 QUIET)
-endif ()
+OPTION(SCHRODINGER_PYTHON "Also build the python bindings" ON)
+if (SCHRODINGER_PYTHON)
+    if (IS_DIRECTORY ${PROJECT_SOURCE_DIR}/lib/pybind11)
+        add_subdirectory(lib/pybind11)
+    else ()
+        find_package(pybind11 QUIET)
+    endif ()
 
-if (pybind11_FOUND)
-    message("Adding schrodinger_py")
-    pybind11_add_module(schrodinger_py MODULE src/python/schrodinger.cpp ${SCHRODINGER_SRC})
-    target_link_libraries(schrodinger_py PRIVATE ${libraries})
-    message("-- pybind: ${pybind11_VERSION}")
-    message("-- python: ${PYTHON_EXECUTABLE}")
+    if (pybind11_FOUND)
+        message("Adding schrodinger_py")
+        pybind11_add_module(schrodinger_py MODULE src/python/schrodinger.cpp ${SCHRODINGER_SRC})
+        target_link_libraries(schrodinger_py PRIVATE ${libraries})
+        message("-- pybind: ${pybind11_VERSION}")
+        message("-- python: ${PYTHON_EXECUTABLE}")
 
-    configure_file(src/python/setup.py setup.py NEWLINE_STYLE LF)
-    configure_file(src/python/description.md description.md NEWLINE_STYLE LF)
+        configure_file(src/python/setup.py setup.py NEWLINE_STYLE LF)
+        configure_file(src/python/description.md description.md NEWLINE_STYLE LF)
 
-    add_custom_target(install_schrodinger_py
-            COMMAND ${CMAKE_COMMAND} -E env SCHRODINGER_LIBRARY="$<TARGET_FILE:schrodinger_py>"
-            ${PYTHON_EXECUTABLE} -m pip install --upgrade --ignore-installed .
-            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-    add_dependencies(install_schrodinger_py schrodinger_py)
-else ()
-    message("-- pybind11 not found")
+        add_custom_target(install_schrodinger_py
+                COMMAND ${CMAKE_COMMAND} -E env SCHRODINGER_LIBRARY="$<TARGET_FILE:schrodinger_py>"
+                ${PYTHON_EXECUTABLE} -m pip install --upgrade --ignore-installed .
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+        add_dependencies(install_schrodinger_py schrodinger_py)
+    else ()
+        message("To enable python bindings, make sure pybind11 is available in /lib/pybind11. Or disable the python bindings with -DSCHRODINGER_PYTHON=OFF")
+    endif ()
 endif ()

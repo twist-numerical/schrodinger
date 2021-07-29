@@ -43,6 +43,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release `
             -DEigen3_DIR="$(resolve-path ../../eigen/build)" `
             -DSCHRODINGER_LONG_DOUBLE=ON `
+            -DSCHRODINGER_PYTHON=OFF `
             ..
           cmake --build . --target schrodinger_test --config Release
         working-directory: ./build
@@ -51,7 +52,8 @@ jobs:
         run: |
           cmake .. -DCMAKE_BUILD_TYPE=Release \
             -DEigen3_DIR="$(pwd)/../../eigen/build" \
-            -DSCHRODINGER_LONG_DOUBLE=ON
+            -DSCHRODINGER_LONG_DOUBLE=ON \
+            -DSCHRODINGER_PYTHON=OFF
           cmake --build . --target schrodinger_test --config Release -- -j 3
         working-directory: ./build
       - name: Run tests
