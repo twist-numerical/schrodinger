@@ -48,7 +48,7 @@ jobs:
           cmake --build . --target schrodinger_test --config Release
         working-directory: ./build
         env:
-          CXXFLAGS: "-DMS_WIN64=1 -D_hypot=hypot -static-libgcc -static"
+          CXXFLAGS: "-DMS_WIN64=1 -D_hypot=hypot"
           LDFLAGS: "-static"
       - if: ${{!startsWith(matrix.os, 'windows')}}
         name: CMake (not Windows)
