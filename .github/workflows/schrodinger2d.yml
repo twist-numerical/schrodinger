@@ -41,14 +41,11 @@ jobs:
         run: |
           cmake -G "MinGW Makefiles" `
             -DCMAKE_BUILD_TYPE=Release `
-            -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF `
             -DEigen3_DIR="$(resolve-path ../../eigen/build)" `
             -DSCHRODINGER_LONG_DOUBLE=ON `
             ..
           cmake --build . --target schrodinger_test --config Release
         working-directory: ./build
-        env:
-          CXXFLAGS: "-DMS_WIN64=1 -D_hypot=hypot"
       - if: ${{!startsWith(matrix.os, 'windows')}}
         name: CMake (not Windows)
         run: |
