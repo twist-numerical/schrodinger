@@ -21,7 +21,7 @@ TEST_CASE("Ixaru potential vertical", "[ixaru]") {
                                     .maxBasisSize=14
                             });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-6);
+    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
 }
 
 TEST_CASE("Ixaru potential horizontal", "[ixaru]") {
@@ -32,7 +32,7 @@ TEST_CASE("Ixaru potential horizontal", "[ixaru]") {
                                     .maxBasisSize=16
                             });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-6);
+    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
 }
 
 #ifdef SCHRODINGER_LONG_DOUBLE
