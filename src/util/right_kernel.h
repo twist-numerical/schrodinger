@@ -33,7 +33,7 @@ namespace schrodinger::internal {
         if (threshold < 0)
             threshold = RealScalar(diag) * Eigen::NumTraits<Scalar>::epsilon();
 
-        const Eigen::MatrixXd &qr = QR.matrixQR();
+        const typename decltype(QR)::MatrixType &qr = QR.matrixQR();
         typename decltype(QR)::HouseholderSequenceType householder = QR.householderQ().setLength(QR.nonzeroPivots());
 
         Eigen::Index count = cols - diag;
@@ -45,7 +45,7 @@ namespace schrodinger::internal {
         Eigen::Index j = 0;
         for (Eigen::Index i = 0; i < cols; ++i)
             if (diag <= i || std::abs(qr(i, i)) < threshold)
-                K.col(j++) = householder * Eigen::VectorXd::Unit(cols, i);
+                K.col(j++) = householder * Eigen::Matrix<Scalar, Eigen::Dynamic, 1>::Unit(cols, i);
 
         assert(j == count);
 

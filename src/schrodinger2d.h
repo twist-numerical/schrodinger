@@ -22,24 +22,29 @@ namespace schrodinger {
         int maxBasisSize = 22;
     };
 
+    template<typename Scalar>
     class Schrodinger2D {
     public:
         class Eigenfunction;
 
+        typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> ArrayXs;
+        typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXs;
+        typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorXs;
+
         struct Thread {
-            double value;
+            Scalar value;
             Eigen::Index valueIndex;
             size_t offset;
             Eigen::Index gridOffset;
             Eigen::Index gridLength;
-            std::shared_ptr<matslise::Matslise<double>> matslise;
-            std::vector<std::pair<double, matslise::Matslise<double>::Eigenfunction>> eigenpairs;
+            std::shared_ptr<matslise::Matslise<Scalar>> matslise;
+            std::vector<std::pair<Scalar, typename matslise::Matslise<Scalar>::Eigenfunction>> eigenpairs;
         };
 
         struct Intersection {
-            PerDirection<double> position;
+            PerDirection<Scalar> position;
             PerDirection<const Thread *> thread;
-            PerDirection<Eigen::ArrayXd> evaluation;
+            PerDirection<ArrayXs> evaluation;
         };
 
         struct Tile {
@@ -47,42 +52,43 @@ namespace schrodinger {
                                                            nullptr}; // [(xmin,ymin), (xmin, ymax), (xmax, ymin), (xmax, ymax)]
         };
 
-        PerDirection<Eigen::ArrayXd> grid;
+        PerDirection<ArrayXs> grid;
         PerDirection<std::vector<Thread>> threads;
         std::vector<Intersection> intersections;
         Eigen::Array<Tile, Eigen::Dynamic, Eigen::Dynamic> tiles;
         PerDirection<size_t> columns;
 
-        std::function<double(double, double)> V;
-        isocpp_p0201::polymorphic_value<geometry::Domain<double, 2>> domain;
+        std::function<Scalar(Scalar, Scalar)> V;
+        isocpp_p0201::polymorphic_value<geometry::Domain<Scalar, 2>> domain;
         Options options;
 
         Schrodinger2D(const Schrodinger2D &) = delete;
 
         Schrodinger2D &operator=(const Schrodinger2D &) = delete;
 
-        Schrodinger2D(const std::function<double(double, double)> &V,
-                      const geometry::Domain<double, 2> &_domain,
+        Schrodinger2D(const std::function<Scalar(Scalar, Scalar)> &V,
+                      const geometry::Domain<Scalar, 2> &_domain,
                       const Options &options = Options());
 
-        std::vector<double> eigenvalues() const;
+        std::vector<Scalar> eigenvalues() const;
 
-        std::vector<std::pair<double, Eigenfunction>> eigenfunctions() const;
+        std::vector<std::pair<Scalar, Eigenfunction>> eigenfunctions() const;
 
     private:
         Eigen::MatrixXd discreteProblem();
     };
 
-    class Schrodinger2D::Eigenfunction {
-        const Schrodinger2D *problem;
-        double E;
-        Eigen::VectorXd c;
+    template<typename Scalar>
+    class Schrodinger2D<Scalar>::Eigenfunction {
+        const Schrodinger2D<Scalar> *problem;
+        Scalar E;
+        VectorXs c;
     public:
-        Eigenfunction(const Schrodinger2D *problem, double E, const Eigen::VectorXd &c)
+        Eigenfunction(const Schrodinger2D *problem, Scalar E, const VectorXs &c)
                 : problem(problem), E(E), c(c) {
         }
 
-        double operator()(double x, double y) const;
+        Scalar operator()(Scalar x, Scalar y) const;
     };
 }
 

@@ -6,6 +6,9 @@ set(SCHRODINGER_VERSION "0.0.1")
 
 set(CMAKE_CXX_STANDARD 17)
 
+# -fPIC needed for pybind
+set(BUILD_SHARED_LIBS ON)
+
 if (MSVC)
     add_compile_options(/W4 /WX)
 else ()
@@ -25,6 +28,16 @@ SET(MATSLISE_MATSCS OFF)
 SET(MATSLISE_2D OFF)
 SET(MATSLISE_3D OFF)
 SET(MATSLISE_PYTHON OFF)
+
+OPTION(SCHRODINGER_LONG_DOUBLE "Compile with support for long double" OFF)
+if (SCHRODINGER_LONG_DOUBLE)
+    add_definitions(-DSCHRODINGER_LONG_DOUBLE)
+    message("-- with support for long double")
+    set(LONG_DOUBLE ON)
+else ()
+    set(LONG_DOUBLE OFF)
+    message("-- without support for long double")
+endif ()
 
 add_subdirectory(lib/matslise)
 include_directories(lib/matslise)

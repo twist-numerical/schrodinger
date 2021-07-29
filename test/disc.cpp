@@ -11,12 +11,12 @@ const std::vector<double> expected{
 };
 
 TEST_CASE("Zero potential on a disc", "[disc]") {
-    Schrodinger2D s([](double, double) { return 0; },
+    Schrodinger2D<double> s([](double, double) { return 0; },
                     Sphere<double, 2>({0, 0}, 1),
                     Options{
-                            .gridSize={.x=50, .y=50},
-                            .maxBasisSize=26
+                            .gridSize={.x=40, .y=40},
+                            .maxBasisSize=20
                     });
 
-    checkEigenvalues(expected, s.eigenvalues(), 1);
+    checkEigenvalues<double>(expected, s.eigenvalues(), 1);
 }

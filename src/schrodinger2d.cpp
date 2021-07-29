@@ -30,25 +30,28 @@ public:
     };
 };
 
-Schrodinger2D::Thread
-computeThread(const std::function<double(double)> &V, double min, double max, size_t maxPairs,
-              const Ref<const ArrayXd> &grid, size_t &offset) {
-    const double *from = std::lower_bound(IterateEigen(grid).begin(), IterateEigen(grid).end(), min);
+template<typename Scalar>
+typename Schrodinger2D<Scalar>::Thread
+computeThread(const std::function<Scalar(Scalar)> &V, Scalar min, Scalar max, size_t maxPairs,
+              const Ref<const Array<Scalar, Dynamic, 1>> &grid, size_t &offset) {
+    typedef IterateEigen<const Ref<const Array<Scalar, Dynamic, 1>>> Iterate;
+
+    const Scalar *from = std::lower_bound(Iterate(grid).begin(), Iterate(grid).end(), min);
     if (*from == min)
         ++from;
 
-    Index length = std::distance(from, std::lower_bound(from, IterateEigen(grid).end(), max));
-    Schrodinger2D::Thread thread = {
+    Index length = std::distance(from, std::lower_bound(from, Iterate(grid).end(), max));
+    typename Schrodinger2D<Scalar>::Thread thread = {
             .offset = offset,
-            .gridOffset = std::distance(IterateEigen(grid).begin(), from),
+            .gridOffset = std::distance(Iterate(grid).begin(), from),
             .gridLength = length,
     };
     if (length == 0) return thread;
-    thread.matslise = make_shared<Matslise<double>>(V, min, max);
+    thread.matslise = make_shared<Matslise<Scalar>>(V, min, max);
     size_t pairs = std::min(maxPairs, (size_t) length);
 
     thread.eigenpairs.reserve(pairs);
-    for (auto &iEf : thread.matslise->eigenpairsByIndex(0, pairs, Y<>::Dirichlet())) {
+    for (auto &iEf : thread.matslise->eigenpairsByIndex(0, pairs, Y<Scalar>::Dirichlet())) {
         auto &f = get<2>(iEf);
         thread.eigenpairs.emplace_back(get<1>(iEf), f);
     }
@@ -57,32 +60,26 @@ computeThread(const std::function<double(double)> &V, double min, double max, si
     return thread;
 }
 
-Schrodinger2D::Schrodinger2D(const function<double(double, double)> &_V,
-                             const Domain<double, 2> &_domain,
-                             const Options &_options)
-        : V(_V), domain(polymorphic_value<Domain<double, 2>>
-
-                                (_domain.
-
-                                        clone(), Domain<double, 2>::copy()
-
-                                )),
+template<typename Scalar>
+Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &_V,
+                                     const Domain<Scalar, 2> &_domain,
+                                     const Options &_options)
+        : V(_V), domain(polymorphic_value<Domain<Scalar, 2>>(_domain.clone(), typename Domain<Scalar, 2>::copy{})),
           options(_options) {
-    grid.x = ArrayXd::LinSpaced(options.gridSize.x + 2, domain->min(0), domain->max(0))
+    grid.x = ArrayXs::LinSpaced(options.gridSize.x + 2, domain->min(0), domain->max(0))
             .segment(1, options.gridSize.x);
-    grid.y = ArrayXd::LinSpaced(options.gridSize.y + 2, domain->min(1), domain->max(1))
+    grid.y = ArrayXs::LinSpaced(options.gridSize.y + 2, domain->min(1), domain->max(1))
             .segment(1, options.gridSize.y);
 
     {
         columns.x = 0;
         Index i = 0;
 // #pragma omp parallel for ordered schedule(dynamic, 1) collapse(2)
-        for (double &x : IterateEigen(grid.x)) {
-            for (auto &dom : domain->intersections({{x, 0}, Vector<double, 2>::Unit(1)})) {
-                Thread thread = computeThread([this, x](double y) -> double { return V(x, y) / 2; },
-                                              dom.first, dom.second,
-                                              (size_t) options.maxBasisSize,
-                                              grid.y, columns.x);
+        for (Scalar &x : IterateEigen(grid.x)) {
+            for (auto &dom : domain->intersections({{x, 0}, Vector<Scalar, 2>::Unit(1)})) {
+                Thread thread = computeThread<Scalar>(
+                        [this, x](Scalar y) -> Scalar { return V(x, y) / 2; },
+                        dom.first, dom.second, (size_t) options.maxBasisSize, grid.y, columns.x);
 // #pragma ordered
                 thread.value = x;
                 thread.valueIndex = i;
@@ -100,11 +97,11 @@ Schrodinger2D::Schrodinger2D(const function<double(double, double)> &_V,
     intersections.reserve(intersectionCount);
 
     for (const Thread &t : threads.x) {
-        MatrixXd onGrid(t.gridLength, t.eigenpairs.size());
-        ArrayXd subGrid = grid.y.segment(t.gridOffset, t.gridLength);
+        MatrixXs onGrid(t.gridLength, t.eigenpairs.size());
+        ArrayXs subGrid = grid.y.segment(t.gridOffset, t.gridLength);
         Index j = 0;
         for (auto &Ef : t.eigenpairs)
-            onGrid.col(j++) = get<1>(Ef)(subGrid).unaryExpr([](const Y<> y) -> double { return y.y()[0]; });
+            onGrid.col(j++) = get<1>(Ef)(subGrid).unaryExpr([](const Y<Scalar> y) -> Scalar { return y.y()[0]; });
         for (Index i = 0; i < t.gridLength; ++i) {
             intersections.emplace_back(Intersection{
                     .position={.x=t.value, .y= grid.y[t.gridOffset + i]},
@@ -118,12 +115,11 @@ Schrodinger2D::Schrodinger2D(const function<double(double, double)> &_V,
         columns.y = 0;
         Index i = 0;
 // #pragma omp parallel for schedule(dynamic, 1) collapse(2)
-        for (double &y : IterateEigen(grid.y)) {
-            for (auto &dom : domain->intersections({{0, y}, Vector<double, 2>::Unit(0)})) {
-                Thread thread = computeThread([this, y](double x) -> double { return V(x, y) / 2; },
-                                              dom.first, dom.second,
-                                              (size_t) options.maxBasisSize,
-                                              grid.x, columns.y);
+        for (Scalar &y : IterateEigen(grid.y)) {
+            for (auto &dom : domain->intersections({{0, y}, Vector<Scalar, 2>::Unit(0)})) {
+                Thread thread = computeThread<Scalar>(
+                        [this, y](Scalar x) -> Scalar { return V(x, y) / 2; },
+                        dom.first, dom.second, (size_t) options.maxBasisSize, grid.x, columns.y);
                 thread.value = y;
                 thread.valueIndex = i;
 // #pragma ordered
@@ -146,11 +142,11 @@ Schrodinger2D::Schrodinger2D(const function<double(double, double)> &_V,
                   });
         auto intersection = intersectionsByY.begin();
         for (Thread &t : threads.y) {
-            MatrixXd onGrid(t.gridLength, t.eigenpairs.size());
-            ArrayXd subGrid = grid.x.segment(t.gridOffset, t.gridLength);
+            MatrixXs onGrid(t.gridLength, t.eigenpairs.size());
+            ArrayXs subGrid = grid.x.segment(t.gridOffset, t.gridLength);
             Index j = 0;
             for (auto &Ef : t.eigenpairs)
-                onGrid.col(j++) = get<1>(Ef)(subGrid).unaryExpr([](const Y<> y) -> double { return y.y()[0]; });
+                onGrid.col(j++) = get<1>(Ef)(subGrid).unaryExpr([](const Y<Scalar> y) -> Scalar { return y.y()[0]; });
             for (Index i = 0; i < t.gridLength; ++i) {
                 assert((**intersection).position.x == grid.x[t.gridOffset + i] &&
                        (**intersection).position.y == t.value);
@@ -174,20 +170,23 @@ Schrodinger2D::Schrodinger2D(const function<double(double, double)> &_V,
     }
 }
 
-template<bool withEigenfunctions>
-std::vector<typename std::conditional_t<withEigenfunctions, std::pair<double, Schrodinger2D::Eigenfunction>, double>>
-eigenpairs(const Schrodinger2D *self) {
+template<typename Scalar, bool withEigenfunctions>
+std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, typename Schrodinger2D<Scalar>::Eigenfunction>, Scalar>>
+eigenpairs(const Schrodinger2D<Scalar> *self) {
+    using ArrayXs = typename Schrodinger2D<Scalar>::ArrayXs;
+    using MatrixXs = typename Schrodinger2D<Scalar>::MatrixXs;
+    using VectorXs = typename Schrodinger2D<Scalar>::VectorXs;
     size_t rows = self->intersections.size();
 
     size_t colsX = self->columns.x;
     size_t colsY = self->columns.y;
 
 
-    MatrixXd beta_x = MatrixXd::Zero(rows, colsX);
-    MatrixXd beta_y = MatrixXd::Zero(rows, colsY);
+    MatrixXs beta_x = MatrixXs::Zero(rows, colsX);
+    MatrixXs beta_y = MatrixXs::Zero(rows, colsY);
 
     size_t row = 0;
-    for (const Schrodinger2D::Intersection &intersection : self->intersections) {
+    for (const typename Schrodinger2D<Scalar>::Intersection &intersection : self->intersections) {
         beta_x.row(row).segment(
                 intersection.thread.x->offset, intersection.thread.x->eigenpairs.size()
         ) = intersection.evaluation.x;
@@ -199,8 +198,8 @@ eigenpairs(const Schrodinger2D *self) {
     }
     assert(row == rows);
 
-    VectorXd lambda_x(colsX);
-    VectorXd lambda_y(colsY);
+    VectorXs lambda_x(colsX);
+    VectorXs lambda_y(colsY);
 
     for (const auto &x : self->threads.x) {
         Index offset = x.offset;
@@ -213,68 +212,77 @@ eigenpairs(const Schrodinger2D *self) {
             lambda_y(offset++) = get<0>(ef);
     }
 
-    MatrixXd crossingsMatch(rows, colsX + colsY);
+    MatrixXs crossingsMatch(rows, colsX + colsY);
     crossingsMatch << beta_x, -beta_y;
-    MatrixXd kernel = schrodinger::internal::rightKernel<MatrixXd>(crossingsMatch, 1e-3);
+    MatrixXs kernel = schrodinger::internal::rightKernel<MatrixXs>(crossingsMatch, 1e-3);
 
-    MatrixXd A(rows, colsX + colsY); // rows x (colsX + colsY)
+    MatrixXs A(rows, colsX + colsY); // rows x (colsX + colsY)
     A << beta_x * lambda_x.asDiagonal(), beta_y * lambda_y.asDiagonal();
 
-    MatrixXd BK = colsY < colsX // rows x kernelSize
+    MatrixXs BK = colsY < colsX // rows x kernelSize
                   ? beta_y * kernel.bottomRows(colsY)
                   : beta_x * kernel.topRows(colsX);
 
-    MatrixXd T = (BK.transpose() * BK).ldlt().solve(BK.transpose() * A * kernel);
+    MatrixXs T = (BK.transpose() * BK).ldlt().solve(BK.transpose() * A * kernel);
 
     if constexpr(withEigenfunctions) {
-        EigenSolver<MatrixXd> solver(T, true);
-        const VectorXcd &values = solver.eigenvalues();
-        MatrixXcd vectors = solver.eigenvectors();
+        EigenSolver<MatrixXs> solver(T, true);
+        const auto values = solver.eigenvalues();
+        auto vectors = solver.eigenvectors();
 
-        typedef std::pair<double, Schrodinger2D::Eigenfunction> Eigenpair;
+        typedef std::pair<Scalar, typename Schrodinger2D<Scalar>::Eigenfunction> Eigenpair;
         std::vector<Eigenpair> eigenfunctions;
         eigenfunctions.reserve(values.size());
         for (Index i = 0; i < values.size(); ++i)
             eigenfunctions.emplace_back(
                     values[i].real(),
-                    Schrodinger2D::Eigenfunction(self, values[i].real(), kernel * vectors.col(i).real())
+                    typename Schrodinger2D<Scalar>::Eigenfunction{
+                            self, values[i].real(), kernel * vectors.col(i).real()}
             );
         return eigenfunctions;
     } else {
-        ArrayXd values = T.eigenvalues().array().real();
+        ArrayXs values = T.eigenvalues().array().real();
         std::sort(values.data(), values.data() + values.size());
-        std::vector<double> eigenvalues(values.size());
+        std::vector<Scalar> eigenvalues(values.size());
         std::copy(values.data(), values.data() + values.size(), eigenvalues.begin());
 
         return eigenvalues;
     }
 }
 
-std::vector<double> Schrodinger2D::eigenvalues() const {
-    return eigenpairs<false>(this);
+template<typename Scalar>
+std::vector<Scalar> Schrodinger2D<Scalar>::eigenvalues() const {
+    return eigenpairs<Scalar, false>(this);
 }
 
-std::vector<std::pair<double, Schrodinger2D::Eigenfunction>> Schrodinger2D::eigenfunctions() const {
-    return eigenpairs<true>(this);
+template<typename Scalar>
+std::vector<std::pair<Scalar, typename Schrodinger2D<Scalar>::Eigenfunction>>
+Schrodinger2D<Scalar>::eigenfunctions() const {
+    return eigenpairs<Scalar, true>(this);
 }
 
-Index highestLowerIndex(const ArrayXd &range, double value) {
-    const double *start = range.data();
+template<typename Scalar>
+Index highestLowerIndex(const Array<Scalar, Dynamic, 1> &range, Scalar value) {
+    const Scalar *start = range.data();
     Index d = std::distance(start, std::lower_bound(start, start + range.size(), value));
     if (d >= range.size() || value < range[d])
         --d;
     return d;
 }
 
-Array2d reconstructEigenfunction(const Schrodinger2D::Thread *t, const Ref<const ArrayXd> &c, const Array2d &v) {
-    ArrayXd x = v;
-    Array2d r = Array2d::Zero();
+template<typename Scalar>
+Array<Scalar, 2, 1>
+reconstructEigenfunction(const typename Schrodinger2D<Scalar>::Thread *t, const Ref<const Array<Scalar, Dynamic, 1>> &c,
+                         const Array<Scalar, 2, 1> &v) {
+    Array<Scalar, Dynamic, 1> x = v;
+    Array<Scalar, 2, 1> r = Array<Scalar, 2, 1>::Zero();
     for (size_t i = 0; i < t->eigenpairs.size(); ++i)
-        r += c(t->offset + i) * t->eigenpairs[i].second(x).unaryExpr([](const Y<> &y) { return y.y()[0]; });
+        r += c(t->offset + i) * t->eigenpairs[i].second(x).unaryExpr([](const Y<Scalar> &y) { return y.y()[0]; });
     return r;
 }
 
-double Schrodinger2D::Eigenfunction::operator()(double x, double y) const {
+template<typename Scalar>
+Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) const {
     problem->domain->contains({x, y});
 
     Index ix = highestLowerIndex(problem->grid.x, x);
@@ -287,29 +295,32 @@ double Schrodinger2D::Eigenfunction::operator()(double x, double y) const {
         || tile.intersections[3] == nullptr)
         return 0;
 
-    double xOffset = problem->grid.x[ix];
-    double yOffset = problem->grid.y[iy];
-    double x1 = x - xOffset;
-    double y1 = y - yOffset;
-    double hx = problem->grid.x[ix + 1] - xOffset;
-    double hy = problem->grid.y[iy + 1] - yOffset;
-    Vector4d wx, wy;
-    double nx = 2 / (hx * x1 - x1 * x1);
+    Scalar xOffset = problem->grid.x[ix];
+    Scalar yOffset = problem->grid.y[iy];
+    Scalar x1 = x - xOffset;
+    Scalar y1 = y - yOffset;
+    Scalar hx = problem->grid.x[ix + 1] - xOffset;
+    Scalar hy = problem->grid.y[iy + 1] - yOffset;
+    Vector<Scalar, 4> wx, wy;
+    Scalar nx = 2 / (hx * x1 - x1 * x1);
     wx << (2 * hx - 3 * x1) * nx / hx, -2 * nx, nx, -(hx - 3 * x1) * nx / hx;
-    double ny = 2 / (hy * y1 - y1 * y1);
+    Scalar ny = 2 / (hy * y1 - y1 * y1);
     wy << (2 * hy - 3 * y1) * ny / hy, -2 * ny, ny, -(hy - 3 * y1) * ny / hy;
 
-    Array2d xs, ys;
+    typedef Array<Scalar, 2, 1> Array2s;
+    Array2s xs, ys;
     xs << xOffset + x1, xOffset + hx - x1;
     ys << yOffset + y1, yOffset + hy - y1;
-    Array2d fy0 = reconstructEigenfunction(tile.intersections[0]->thread.y, c.bottomRows(problem->columns.y), xs);
-    Array2d fx0 = reconstructEigenfunction(tile.intersections[0]->thread.x, c.topRows(problem->columns.x), ys);
-    Array2d fy3 = reconstructEigenfunction(tile.intersections[3]->thread.y, c.bottomRows(problem->columns.y), xs);
-    Array2d fx3 = reconstructEigenfunction(tile.intersections[3]->thread.x, c.topRows(problem->columns.x), ys);
+    Array2s fy0 = reconstructEigenfunction<Scalar>(tile.intersections[0]->thread.y, c.bottomRows(problem->columns.y),
+                                                   xs);
+    Array2s fx0 = reconstructEigenfunction<Scalar>(tile.intersections[0]->thread.x, c.topRows(problem->columns.x), ys);
+    Array2s fy3 = reconstructEigenfunction<Scalar>(tile.intersections[3]->thread.y, c.bottomRows(problem->columns.y),
+                                                   xs);
+    Array2s fx3 = reconstructEigenfunction<Scalar>(tile.intersections[3]->thread.x, c.topRows(problem->columns.x), ys);
 
     {
-        Matrix4d w = Matrix4d::Zero();
-        Vector4d b;
+        Matrix<Scalar, 4, 4> w = Matrix<Scalar, 4, 4>::Zero();
+        Vector<Scalar, 4> b;
         for (int i = 1; i <= 2; ++i)
             for (int j = 1; j <= 2; ++j) {
                 b(2 * i + j - 3) =
@@ -324,3 +335,13 @@ double Schrodinger2D::Eigenfunction::operator()(double x, double y) const {
         return (w.inverse() * b)(0);
     }
 }
+
+template
+class schrodinger::Schrodinger2D<double>;
+
+#ifdef SCHRODINGER_LONG_DOUBLE
+
+template
+class schrodinger::Schrodinger2D<long double>;
+
+#endif

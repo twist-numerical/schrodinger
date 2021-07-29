@@ -5,11 +5,14 @@
 #include "../src/schrodinger2d.h"
 #include <vector>
 
-inline void checkEigenvalues(const std::vector<double> &expected, const std::vector<double> &found, double tolerance = 1e-8) {
+template<typename Scalar, typename T=Scalar>
+inline void
+checkEigenvalues(const std::vector<T> &expected,
+                 const std::vector<Scalar> &found, Scalar tolerance = 1e-8) {
     REQUIRE(expected.size() <= found.size());
 
     for (size_t i = 0; i < expected.size(); ++i) {
-        REQUIRE(Approx(expected[i]).margin(tolerance) == found[i]);
+        REQUIRE(Approx(Scalar(expected[i])).epsilon(tolerance) == found[i]);
     }
 }
 

@@ -5,40 +5,48 @@ using namespace schrodinger;
 using namespace schrodinger::geometry;
 
 const std::vector<double> expected{
-        3.1959181, 5.5267439, 5.5267439, 7.5578033, 8.0312723,
-        8.4445814, 9.9280611, 9.9280611, 11.3118171, 11.3118171,
-        12.1032536, 12.2011790, 13.3323313
+        3.1959180863164467, 5.526743874681427, 5.526743875458036,
+        7.557803329778595, 8.031272341129998, 8.444581359170941,
+        9.928061056175023, 9.928061059792322, 11.311817048862636,
+        11.311817048862636, 12.103253580682654, 12.20117897122486,
+        13.33233126944338, 14.348268533723068, 14.348268539359145,
+        14.450478722829562, 14.580556316639049
 };
 
 TEST_CASE("Ixaru potential vertical", "[ixaru]") {
-    Schrodinger2D s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
-                    Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
-                    Options{
-                            .gridSize={.x=28, .y=30},
-                            .maxBasisSize=14
-                    });
+    Schrodinger2D<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
+                            Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
+                            Options{
+                                    .gridSize={.x=28, .y=30},
+                                    .maxBasisSize=14
+                            });
 
-    checkEigenvalues(expected, s.eigenvalues(), 1e-6);
+    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-6);
 }
 
 TEST_CASE("Ixaru potential horizontal", "[ixaru]") {
-    Schrodinger2D s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
-                    Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
-                    Options{
-                            .gridSize={.x=30, .y=28},
-                            .maxBasisSize=16
-                    });
+    Schrodinger2D<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
+                            Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
+                            Options{
+                                    .gridSize={.x=30, .y=28},
+                                    .maxBasisSize=16
+                            });
 
-    checkEigenvalues(expected, s.eigenvalues(), 1e-6);
+    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-6);
 }
 
-TEST_CASE("Ixaru potential diamond", "[ixaru]") {
-    Schrodinger2D s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
-                    Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
-                    Options{
-                            .gridSize={.x=30, .y=28},
-                            .maxBasisSize=16
-                    });
+#ifdef SCHRODINGER_LONG_DOUBLE
 
-    checkEigenvalues(expected, s.eigenvalues(), 1e-6);
+TEST_CASE("Ixaru potential long double", "[ixaru][long double]") {
+    typedef long double Scalar;
+    Schrodinger2D<Scalar> s([](Scalar x, Scalar y) { return (1 + x * x) * (1 + y * y); },
+                            Rectangle<Scalar, 2>(-5.5, 5.5, -5.5, 5.5),
+                            Options{
+                                    .gridSize={.x=35, .y=35},
+                                    .maxBasisSize=20
+                            });
+
+    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(), 1e-8);
 }
+
+#endif
