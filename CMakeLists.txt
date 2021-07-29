@@ -48,7 +48,7 @@ add_executable(schrodinger_test
         test/disc.cpp
         test/main.cpp)
 
-target_link_libraries(schrodinger_test PRIVATE schrodinger ${libraries})
+target_link_libraries(schrodinger_test PRIVATE schrodinger)
 
 enable_testing()
 add_test(NAME schrodinger_test COMMAND schrodinger_test)
