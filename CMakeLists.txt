@@ -19,6 +19,7 @@ SET(SCHRODINGER_SRC src/schrodinger2d.cpp)
 
 add_library(schrodinger ${SCHRODINGER_SRC})
 
+SET(MATSLISE_STATIC ON)
 SET(MATSLISE_MATSCS OFF)
 SET(MATSLISE_2D OFF)
 SET(MATSLISE_3D OFF)
@@ -36,6 +37,7 @@ endif ()
 
 add_subdirectory(lib/matslise)
 include_directories(lib/matslise)
+set_property(TARGET matslise PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 message("Schrodinger")
 
@@ -49,6 +51,7 @@ add_executable(schrodinger_test
         test/main.cpp)
 
 target_link_libraries(schrodinger_test PRIVATE schrodinger)
+add_dependencies(schrodinger_test schrodinger)
 
 enable_testing()
 add_test(NAME schrodinger_test COMMAND schrodinger_test)
