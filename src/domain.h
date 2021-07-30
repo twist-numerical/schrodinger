@@ -14,12 +14,9 @@ namespace schrodinger::geometry {
     public:
         virtual bool contains(const Vector<Scalar, d> &point) const = 0;
 
-        virtual std::vector<std::pair<Scalar, Scalar>>
-        intersections(const Ray<Scalar, d> &) const = 0;
+        virtual std::vector<std::pair<Scalar, Scalar>> intersections(const Ray<Scalar, d> &) const = 0;
 
-        virtual Scalar min(int axis) const = 0;
-
-        virtual Scalar max(int axis) const = 0;
+        virtual std::pair<Scalar, Scalar> bounds(const Vector<Scalar, d> &direction) const = 0;
 
         virtual Domain *clone() const = 0;
 
@@ -28,6 +25,46 @@ namespace schrodinger::geometry {
         struct copy {
             Domain *operator()(const Domain &t) const { return t.clone(); }
         };
+    };
+
+    template<class Scalar, int d>
+    class DomainTransform : public Domain<Scalar, d> {
+    private:
+        Eigen::Transform<Scalar, d, Eigen::Affine> transform;
+        Eigen::Transform<Scalar, d, Eigen::Affine> invTransform;
+        isocpp_p0201::polymorphic_value<Domain<Scalar, d>> domain;
+    public:
+        EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+        template<class DomainType, class TransformType>
+        DomainTransform(const DomainType &domain_, const TransformType &transform_) {
+            domain = isocpp_p0201::polymorphic_value<Domain<Scalar, d>>(
+                    static_cast<Domain<Scalar, d> *>(domain_.clone()), typename Domain<Scalar, d>::copy{});
+            transform = transform_;
+            invTransform = transform.inverse();
+        }
+
+        virtual bool contains(const Vector<Scalar, d> &point) const override {
+            return domain->contains(invTransform * point);
+        };
+
+        virtual std::vector<std::pair<Scalar, Scalar>>
+        intersections(const Ray<Scalar, d> &ray) const override {
+            return domain->intersections({invTransform * ray.origin, invTransform.linear() * ray.direction});
+        }
+
+        virtual std::pair<Scalar, Scalar> bounds(const Vector<Scalar, d> &direction) const override {
+            Scalar shift = direction.dot(transform.translation()) / direction.dot(direction);
+            Vector<Scalar, d> dir = invTransform.linear() * direction;
+            Scalar min, max;
+            std::tie(min, max) = domain->bounds(dir);
+            return {min + shift, max + shift};
+        }
+
+        virtual DomainTransform<Scalar, d> *clone() const override {
+            return new DomainTransform<Scalar, d>(*this);
+        };
+
     };
 
     template<class Scalar, int d>
@@ -89,19 +126,19 @@ namespace schrodinger::geometry {
             return intersections;
         }
 
-        virtual Scalar min(int axis) const override {
-            Scalar min = Scalar(std::numeric_limits<float>::infinity());
-            for (const auto &dom : subdomains)
-                min = std::min(min, dom->min(axis));
-            return min;
-        }
+        virtual std::pair<Scalar, Scalar> bounds(const Vector<Scalar, d> &direction) const override {
+            Scalar min = std::numeric_limits<Scalar>::infinity();
+            Scalar max = -std::numeric_limits<Scalar>::infinity();
+            Scalar b_min, b_max;
 
-        virtual Scalar max(int axis) const override {
-            Scalar max = -Scalar(std::numeric_limits<float>::infinity());
-            for (const auto &dom : subdomains)
-                max = std::max(max, dom->max(axis));
-            return max;
-        };
+            for (const auto &dom : subdomains) {
+                std::tie(b_min, b_max) = dom->bounds(direction);
+                min = std::min(min, b_min);
+                max = std::max(max, b_max);
+            }
+
+            return {min, max};
+        }
 
         virtual Union<Scalar, d> *clone() const override {
             return new Union<Scalar, d>(*this);
@@ -111,24 +148,24 @@ namespace schrodinger::geometry {
     template<class Scalar, int d>
     class Rectangle : public Domain<Scalar, d> {
     private:
-        std::array<Scalar, d * 2> bounds;
+        std::array<Scalar, d * 2> bounds_;
     public:
         constexpr Rectangle() {};
 
         template<typename... T, typename=typename std::enable_if<
                 sizeof...(T) == 2 * d && (std::is_convertible<T, Scalar>::value && ...)>::type>
-        constexpr Rectangle(T... bounds) : bounds({bounds...}) {}
+        constexpr Rectangle(T... bounds) : bounds_({bounds...}) {}
 
         virtual bool contains(const Vector<Scalar, d> &point) const override {
             for (int i = 0; i < d; ++i)
-                if (point[i] <= bounds[2 * i] || point[i] >= bounds[2 * i + 1])
+                if (point[i] <= bounds_[2 * i] || point[i] >= bounds_[2 * i + 1])
                     return false;
             return true;
         }
 
         bool withinSide(const Vector<Scalar, d> &point, int axis) const {
             for (int i = 0; i < d; ++i)
-                if (i != axis && (point[i] <= bounds[2 * i] || point[i] >= bounds[2 * i + 1]))
+                if (i != axis && (point[i] <= bounds_[2 * i] || point[i] >= bounds_[2 * i + 1]))
                     return false;
             return true;
         }
@@ -139,8 +176,11 @@ namespace schrodinger::geometry {
             Scalar low = std::numeric_limits<Scalar>::infinity();
             Scalar high = -low;
 
-            V min = this->min();
-            V max = this->max();
+            V min, max;
+            for (int i = 0; i < d; ++i) {
+                min[i] = bounds_[2 * i];
+                max[i] = bounds_[2 * i + 1];
+            }
 
             bool intersecting = false;
             for (int i = 0; i < d; ++i) {
@@ -158,26 +198,22 @@ namespace schrodinger::geometry {
             return {{low, high}};
         }
 
-        Vector<Scalar, d> min() const {
-            Vector<Scalar, d> v;
-            for (int i = 0; i < d; ++i)
-                v[i] = min(i);
-            return v;
-        }
+        virtual std::pair<Scalar, Scalar> bounds(const Vector<Scalar, d> &direction) const override {
+            Vector<Scalar, d> corner;
+            Scalar dd = direction.dot(direction);
 
-        Vector<Scalar, d> max() const {
-            Vector<Scalar, d> v;
-            for (int i = 0; i < d; ++i)
-                v[i] = max(i);
-            return v;
-        }
+            Scalar min = std::numeric_limits<Scalar>::infinity();
+            Scalar max = -std::numeric_limits<Scalar>::infinity();
 
-        virtual Scalar min(int axis) const override {
-            return bounds[2 * axis];
-        }
+            for (int k = 0; k < (1 << d); ++k) {
+                for (int i = 0; i < d; ++i)
+                    corner[i] = bounds_[2 * i + ((k >> i) & 1)];
+                Scalar v = direction.dot(corner) / dd;
+                min = std::min(min, v);
+                max = std::max(max, v);
+            }
 
-        virtual Scalar max(int axis) const override {
-            return bounds[2 * axis + 1];
+            return {min, max};
         }
 
         virtual Rectangle *clone() const override {
@@ -218,12 +254,11 @@ namespace schrodinger::geometry {
             return {{(-b - D) / a, (-b + D) / a}};
         }
 
-        virtual Scalar min(int axis) const override {
-            return center[axis] - radius;
-        }
-
-        virtual Scalar max(int axis) const override {
-            return center[axis] + radius;
+        virtual std::pair<Scalar, Scalar> bounds(const Vector<Scalar, d> &direction) const override {
+            Scalar dd = direction.dot(direction);
+            Scalar c = direction.dot(center) / dd;
+            Scalar r = radius / std::sqrt(dd);
+            return {c - r, c + r};
         }
 
         virtual Sphere *clone() const override {

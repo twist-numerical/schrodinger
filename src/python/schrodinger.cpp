@@ -20,9 +20,11 @@ PYBIND11_MODULE(schrodinger, m) {
     py::class_<Domain<double, 2>>
             (m, "Domain2D")
             .def("contains", &Domain<double, 2>::contains)
-            .def("intersections", &Domain<double, 2>::intersections)
-            .def("min", &Domain<double, 2>::min)
-            .def("max", &Domain<double, 2>::max);
+            .def("intersections",
+                 [](const Domain<double, 2> *self, const Eigen::Vector2d &origin, const Eigen::Vector2d &direction) {
+                     return self->intersections({origin, direction});
+                 })
+            .def("bounds", &Domain<double, 2>::bounds);
 
     py::class_<Rectangle<double, 2>, Domain<double, 2 >>(m, "Rectangle")
             .def(py::init<double, double, double, double>());
@@ -34,6 +36,13 @@ PYBIND11_MODULE(schrodinger, m) {
 
     py::class_<Union<double, 2>, Domain<double, 2 >>(m, "Union")
             .def(py::init<const std::vector<const Domain<double, 2> *> &>());
+
+    py::class_<DomainTransform<double, 2>, Domain<double, 2 >>(m, "DomainTransform")
+            .def(py::init([](const Domain<double, 2> &domain, const Eigen::Matrix3d &transform) {
+                Eigen::Affine2d t;
+                t.matrix() = transform;
+                return new DomainTransform<double, 2>(domain, t);
+            }), py::arg("domain"), py::arg("transformation"));
 
     py::class_<KeepAliveEigenfunction>(m, "Eigenfunction2D")
             .def("__call__", [](const KeepAliveEigenfunction &f, double x, double y) {

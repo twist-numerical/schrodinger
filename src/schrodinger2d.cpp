@@ -61,15 +61,21 @@ computeThread(const std::function<Scalar(Scalar)> &V, Scalar min, Scalar max, si
 }
 
 template<typename Scalar>
+Array<Scalar, Dynamic, 1>
+internal_linspaced(Index size, const Domain<Scalar, 2> *domain, const Vector<Scalar, 2> &direction) {
+    Scalar a, b;
+    tie(a, b) = domain->bounds(direction);
+    return Array<Scalar, Dynamic, 1>::LinSpaced(size + 2, a, b).segment(1, size);
+}
+
+template<typename Scalar>
 Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &_V,
                                      const Domain<Scalar, 2> &_domain,
                                      const Options &_options)
         : V(_V), domain(polymorphic_value<Domain<Scalar, 2>>(_domain.clone(), typename Domain<Scalar, 2>::copy{})),
           options(_options) {
-    grid.x = ArrayXs::LinSpaced(options.gridSize.x + 2, domain->min(0), domain->max(0))
-            .segment(1, options.gridSize.x);
-    grid.y = ArrayXs::LinSpaced(options.gridSize.y + 2, domain->min(1), domain->max(1))
-            .segment(1, options.gridSize.y);
+    grid.x = internal_linspaced<Scalar>(options.gridSize.x, &*domain, Vector<Scalar, 2>::Unit(0));
+    grid.y = internal_linspaced<Scalar>(options.gridSize.y, &*domain, Vector<Scalar, 2>::Unit(1));
 
     {
         columns.x = 0;

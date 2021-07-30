@@ -35,6 +35,29 @@ TEST_CASE("Ixaru potential horizontal", "[ixaru]") {
     checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
 }
 
+TEST_CASE("Ixaru potential diamond", "[ixaru]") {
+    Schrodinger2D<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
+                            DomainTransform<double, 2>(Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
+                                                       Rotation2D<double>(M_PI / 2)),
+                            Options{
+                                    .gridSize={.x=30, .y=30},
+                                    .maxBasisSize=18
+                            });
+
+    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
+}
+
+TEST_CASE("Ixaru potential disc", "[ixaru]") {
+    Schrodinger2D<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
+                            Sphere<double, 2>(5.5),
+                            Options{
+                                    .gridSize={.x=30, .y=30},
+                                    .maxBasisSize=18
+                            });
+
+    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
+}
+
 #ifdef SCHRODINGER_LONG_DOUBLE
 
 TEST_CASE("Ixaru potential long double", "[ixaru][long double]") {
