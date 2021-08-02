@@ -46,8 +46,10 @@ set(libraries matslise)
 target_link_libraries(schrodinger PUBLIC ${libraries})
 
 add_executable(schrodinger_test
-        test/ixaru.cpp
         test/disc.cpp
+        test/harmonic.cpp
+        test/ixaru.cpp
+        test/quartic.cpp
         test/main.cpp)
 
 target_link_libraries(schrodinger_test PRIVATE schrodinger)
