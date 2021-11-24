@@ -37,8 +37,8 @@ namespace schrodinger {
             size_t offset;
             Eigen::Index gridOffset;
             Eigen::Index gridLength;
-            std::shared_ptr<matslise::Matslise<Scalar>> matslise;
-            std::vector<std::pair<Scalar, typename matslise::Matslise<Scalar>::Eigenfunction>> eigenpairs;
+            std::unique_ptr<matslise::Matslise<Scalar>> matslise;
+            std::vector<std::pair<Scalar, std::unique_ptr<typename matslise::Matslise<Scalar>::Eigenfunction>>> eigenpairs;
         };
 
         struct Intersection {
@@ -73,9 +73,6 @@ namespace schrodinger {
         std::vector<Scalar> eigenvalues() const;
 
         std::vector<std::pair<Scalar, Eigenfunction>> eigenfunctions() const;
-
-    private:
-        Eigen::MatrixXd discreteProblem();
     };
 
     template<typename Scalar>

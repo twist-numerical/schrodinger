@@ -47,13 +47,12 @@ computeThread(const std::function<Scalar(Scalar)> &V, Scalar min, Scalar max, si
             .gridLength = length,
     };
     if (length == 0) return thread;
-    thread.matslise = make_shared<Matslise<Scalar>>(V, min, max);
+    thread.matslise = make_unique<Matslise<Scalar>>(V, min, max);
     size_t pairs = std::min(maxPairs, (size_t) length);
 
     thread.eigenpairs.reserve(pairs);
     for (auto &iEf : thread.matslise->eigenpairsByIndex(0, pairs, Y<Scalar>::Dirichlet())) {
-        auto &f = get<2>(iEf);
-        thread.eigenpairs.emplace_back(get<1>(iEf), f);
+        thread.eigenpairs.emplace_back(get<1>(iEf), std::move(get<2>(iEf)));
     }
     offset += pairs;
 
@@ -90,7 +89,7 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &_V,
                 thread.value = x;
                 thread.valueIndex = i;
                 if (thread.gridLength > 0)
-                    threads.x.push_back(thread);
+                    threads.x.emplace_back(std::move(thread));
             }
             i++;
         }
@@ -107,7 +106,7 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &_V,
         ArrayXs subGrid = grid.y.segment(t.gridOffset, t.gridLength);
         Index j = 0;
         for (auto &Ef : t.eigenpairs)
-            onGrid.col(j++) = get<1>(Ef)(subGrid).unaryExpr([](const Y<Scalar> y) -> Scalar { return y.y()[0]; });
+            onGrid.col(j++) = (*get<1>(Ef))(subGrid).col(0);
         for (Index i = 0; i < t.gridLength; ++i) {
             intersections.emplace_back(Intersection{
                     .position={.x=t.value, .y= grid.y[t.gridOffset + i]},
@@ -129,7 +128,7 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &_V,
                 thread.value = y;
                 thread.valueIndex = i;
 // #pragma ordered
-                threads.y.push_back(thread);
+                threads.y.emplace_back(std::move(thread));
             }
             i++;
         }
@@ -152,7 +151,7 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &_V,
             ArrayXs subGrid = grid.x.segment(t.gridOffset, t.gridLength);
             Index j = 0;
             for (auto &Ef : t.eigenpairs)
-                onGrid.col(j++) = get<1>(Ef)(subGrid).unaryExpr([](const Y<Scalar> y) -> Scalar { return y.y()[0]; });
+                onGrid.col(j++) = (*get<1>(Ef))(subGrid).col(0);
             for (Index i = 0; i < t.gridLength; ++i) {
                 assert((**intersection).position.x == grid.x[t.gridOffset + i] &&
                        (**intersection).position.y == t.value);
@@ -283,7 +282,7 @@ reconstructEigenfunction(const typename Schrodinger2D<Scalar>::Thread *t, const 
     Array<Scalar, Dynamic, 1> x = v;
     Array<Scalar, 2, 1> r = Array<Scalar, 2, 1>::Zero();
     for (size_t i = 0; i < t->eigenpairs.size(); ++i)
-        r += c(t->offset + i) * t->eigenpairs[i].second(x).unaryExpr([](const Y<Scalar> &y) { return y.y()[0]; });
+        r += c(t->offset + i) * (*t->eigenpairs[i].second)(x).col(0);;
     return r;
 }
 
