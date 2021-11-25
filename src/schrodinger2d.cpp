@@ -61,7 +61,7 @@ computeThread(const std::function<Scalar(Scalar)> &V, Scalar min, Scalar max, si
 
 template<typename Scalar>
 Array<Scalar, Dynamic, 1>
-internal_linspaced(Index size, const Domain<Scalar, 2> *domain, const Vector<Scalar, 2> &direction) {
+internal_linspaced(Index size, const Domain<Scalar, 2> *domain, const Matrix<Scalar, 2, 1> &direction) {
     Scalar a, b;
     tie(a, b) = domain->bounds(direction);
     return Array<Scalar, Dynamic, 1>::LinSpaced(size + 2, a, b).segment(1, size);
@@ -73,15 +73,15 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &_V,
                                      const Options &_options)
         : V(_V), domain(polymorphic_value<Domain<Scalar, 2>>(_domain.clone(), typename Domain<Scalar, 2>::copy{})),
           options(_options) {
-    grid.x = internal_linspaced<Scalar>(options.gridSize.x, &*domain, Vector<Scalar, 2>::Unit(0));
-    grid.y = internal_linspaced<Scalar>(options.gridSize.y, &*domain, Vector<Scalar, 2>::Unit(1));
+    grid.x = internal_linspaced<Scalar>(options.gridSize.x, &*domain, Matrix<Scalar, 2, 1>::Unit(0));
+    grid.y = internal_linspaced<Scalar>(options.gridSize.y, &*domain, Matrix<Scalar, 2, 1>::Unit(1));
 
     {
         columns.x = 0;
         Index i = 0;
 // #pragma omp parallel for ordered schedule(dynamic, 1) collapse(2)
         for (Scalar &x : IterateEigen(grid.x)) {
-            for (auto &dom : domain->intersections({{x, 0}, Vector<Scalar, 2>::Unit(1)})) {
+            for (auto &dom : domain->intersections({{x, 0}, Matrix<Scalar, 2, 1>::Unit(1)})) {
                 Thread thread = computeThread<Scalar>(
                         [this, x](Scalar y) -> Scalar { return V(x, y) / 2; },
                         dom.first, dom.second, (size_t) options.maxBasisSize, grid.y, columns.x);
@@ -121,7 +121,7 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &_V,
         Index i = 0;
 // #pragma omp parallel for schedule(dynamic, 1) collapse(2)
         for (Scalar &y : IterateEigen(grid.y)) {
-            for (auto &dom : domain->intersections({{0, y}, Vector<Scalar, 2>::Unit(0)})) {
+            for (auto &dom : domain->intersections({{0, y}, Matrix<Scalar, 2, 1>::Unit(0)})) {
                 Thread thread = computeThread<Scalar>(
                         [this, y](Scalar x) -> Scalar { return V(x, y) / 2; },
                         dom.first, dom.second, (size_t) options.maxBasisSize, grid.x, columns.y);
@@ -306,7 +306,7 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) cons
     Scalar y1 = y - yOffset;
     Scalar hx = problem->grid.x[ix + 1] - xOffset;
     Scalar hy = problem->grid.y[iy + 1] - yOffset;
-    Vector<Scalar, 4> wx, wy;
+    Matrix<Scalar, 2, 1> wx, wy;
     Scalar nx = 2 / (hx * x1 - x1 * x1);
     wx << (2 * hx - 3 * x1) * nx / hx, -2 * nx, nx, -(hx - 3 * x1) * nx / hx;
     Scalar ny = 2 / (hy * y1 - y1 * y1);
@@ -325,7 +325,7 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) cons
 
     {
         Matrix<Scalar, 4, 4> w = Matrix<Scalar, 4, 4>::Zero();
-        Vector<Scalar, 4> b;
+        Matrix<Scalar, 4, 1> b;
         for (int i = 1; i <= 2; ++i)
             for (int j = 1; j <= 2; ++j) {
                 b(2 * i + j - 3) =
