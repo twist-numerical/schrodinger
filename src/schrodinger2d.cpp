@@ -68,10 +68,10 @@ internal_linspaced(Index size, const Domain<Scalar, 2> *domain, const Matrix<Sca
 }
 
 template<typename Scalar>
-Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &_V,
+Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
                                      const Domain<Scalar, 2> &_domain,
                                      const Options &_options)
-        : V(_V), domain(polymorphic_value<Domain<Scalar, 2>>(_domain.clone(), typename Domain<Scalar, 2>::copy{})),
+        : V(V_), domain(polymorphic_value<Domain<Scalar, 2>>(_domain.clone(), typename Domain<Scalar, 2>::copy{})),
           options(_options) {
     grid.x = internal_linspaced<Scalar>(options.gridSize.x, &*domain, Matrix<Scalar, 2, 1>::Unit(0));
     grid.y = internal_linspaced<Scalar>(options.gridSize.y, &*domain, Matrix<Scalar, 2, 1>::Unit(1));
