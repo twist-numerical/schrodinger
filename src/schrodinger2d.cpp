@@ -3,6 +3,7 @@
 #include "schrodinger2d.h"
 #include <numeric>
 #include "util/right_kernel.h"
+#include "util/rectangular_pencil.h"
 #include <chrono>
 
 using namespace std;
@@ -228,12 +229,12 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
                   ? beta_y * kernel.bottomRows(colsY)
                   : beta_x * kernel.topRows(colsX);
 
-    MatrixXs T = (BK.transpose() * BK).ldlt().solve(BK.transpose() * A * kernel);
+    RectangularPencil<withEigenfunctions, MatrixXs> pencil(A * kernel, BK);
+
 
     if constexpr(withEigenfunctions) {
-        EigenSolver<MatrixXs> solver(T, true);
-        const auto values = solver.eigenvalues();
-        auto vectors = solver.eigenvectors();
+        const auto &values = pencil.eigenvalues();
+        const auto &vectors = pencil.eigenvectors();
 
         typedef std::pair<Scalar, typename Schrodinger2D<Scalar>::Eigenfunction> Eigenpair;
         std::vector<Eigenpair> eigenfunctions;
@@ -246,7 +247,7 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
             );
         return eigenfunctions;
     } else {
-        ArrayXs values = T.eigenvalues().array().real();
+        ArrayXs values = pencil.eigenvalues().array().real();
         std::sort(values.data(), values.data() + values.size());
         std::vector<Scalar> eigenvalues(values.size());
         std::copy(values.data(), values.data() + values.size(), eigenvalues.begin());
