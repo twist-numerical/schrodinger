@@ -12,7 +12,7 @@ set(BUILD_SHARED_LIBS ON)
 if (MSVC)
     add_compile_options(/W4 /WX)
 else ()
-    add_compile_options(-Wall -Wextra -Werror -Wno-missing-field-initializers)
+    add_compile_options(-O3 -Wall -Wextra -Werror -Wno-missing-field-initializers)
 endif ()
 
 SET(SCHRODINGER_SRC src/schrodinger2d.cpp)
@@ -50,7 +50,9 @@ add_executable(schrodinger_test
         test/harmonic.cpp
         test/ixaru.cpp
         test/quartic.cpp
-        test/main.cpp)
+        test/henon_heiles.cpp
+        test/main.cpp
+        )
 
 target_link_libraries(schrodinger_test PRIVATE schrodinger)
 add_dependencies(schrodinger_test schrodinger)

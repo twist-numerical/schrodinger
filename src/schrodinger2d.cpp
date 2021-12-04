@@ -43,12 +43,16 @@ computeThread(const std::function<Scalar(Scalar)> &V, Scalar min, Scalar max, si
 
     Index length = std::distance(from, std::lower_bound(from, Iterate(grid).end(), max));
     typename Schrodinger2D<Scalar>::Thread thread = {
+            .value = 0,
+            .valueIndex = 0,
             .offset = offset,
             .gridOffset = std::distance(Iterate(grid).begin(), from),
             .gridLength = length,
+            .matslise = nullptr,
+            .eigenpairs = std::vector<std::pair<Scalar, std::unique_ptr<typename matslise::Matslise<Scalar>::Eigenfunction>>>(),
     };
     if (length == 0) return thread;
-    thread.matslise = make_unique<Matslise<Scalar>>(V, min, max);
+    thread.matslise = make_unique<Matslise<Scalar>>(V, min, max, 1e-15);
     size_t pairs = std::min(maxPairs, (size_t) length);
 
     thread.eigenpairs.reserve(pairs);
