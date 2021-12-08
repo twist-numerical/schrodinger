@@ -243,12 +243,33 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
         typedef std::pair<Scalar, typename Schrodinger2D<Scalar>::Eigenfunction> Eigenpair;
         std::vector<Eigenpair> eigenfunctions;
         eigenfunctions.reserve(values.size());
-        for (Index i = 0; i < values.size(); ++i)
+        for (Index i = 0; i < values.size(); ++i) {
+            // Normalize eigenfunction
+            VectorXs coeffs = kernel * vectors.col(i).real();
+
+            /*
+            Scalar sum = 0;
+            for (auto& intersection : self->intersections) {
+                // Calculate function value in intersection
+                Scalar functionVal = 0;
+                ArrayXs vals = intersection.evaluation.x;
+                for (int j = 0; j < vals.size(); j++) {
+                    functionVal += vals(j) * coeffs(intersection.thread.x->offset + j);
+                }
+                sum += functionVal*functionVal;
+            }
+
+
+            Scalar factor = sqrt(self->intersections.size()) / sqrt(sum);
+            // printf("Total sum: %f, num intersections: %d\n", (double)sum, (int)self->intersections.size());
+             */
+
             eigenfunctions.emplace_back(
                     values[i].real(),
                     typename Schrodinger2D<Scalar>::Eigenfunction{
-                            self, values[i].real(), kernel * vectors.col(i).real()}
+                            self, values[i].real(), coeffs}
             );
+        }
         return eigenfunctions;
     } else {
         ArrayXs values = pencil.eigenvalues().array().real();
@@ -311,11 +332,6 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) cons
     Scalar y1 = y - yOffset;
     Scalar hx = problem->grid.x[ix + 1] - xOffset;
     Scalar hy = problem->grid.y[iy + 1] - yOffset;
-    Matrix<Scalar, 2, 1> wx, wy;
-    Scalar nx = 2 / (hx * x1 - x1 * x1);
-    wx << (2 * hx - 3 * x1) * nx / hx, -2 * nx, nx, -(hx - 3 * x1) * nx / hx;
-    Scalar ny = 2 / (hy * y1 - y1 * y1);
-    wy << (2 * hy - 3 * y1) * ny / hy, -2 * ny, ny, -(hy - 3 * y1) * ny / hy;
 
     typedef Array<Scalar, 2, 1> Array2s;
     Array2s xs, ys;
@@ -327,6 +343,19 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) cons
     Array2s fy3 = reconstructEigenfunction<Scalar>(tile.intersections[3]->thread.y, c.bottomRows(problem->columns.y),
                                                    xs);
     Array2s fx3 = reconstructEigenfunction<Scalar>(tile.intersections[3]->thread.x, c.topRows(problem->columns.x), ys);
+
+    if (x == xOffset) {
+        return fx0(0);
+    }
+    if (y == yOffset) {
+        return fy0(0);
+    }
+
+    Matrix<Scalar, 2, 1> wx, wy;
+    Scalar nx = 2 / (hx * x1 - x1 * x1);
+    wx << (2 * hx - 3 * x1) * nx / hx, -2 * nx, nx, -(hx - 3 * x1) * nx / hx;
+    Scalar ny = 2 / (hy * y1 - y1 * y1);
+    wy << (2 * hy - 3 * y1) * ny / hy, -2 * ny, ny, -(hy - 3 * y1) * ny / hy;
 
     {
         Matrix<Scalar, 4, 4> w = Matrix<Scalar, 4, 4>::Zero();
