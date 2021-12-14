@@ -8,7 +8,7 @@ using namespace Eigen;
 using namespace schrodinger;
 using namespace schrodinger::geometry;
 
-TEST_CASE("Henon Heiles", "[henonheiles]") {
+TEST_CASE("Henon Heiles", "[henonheiles][slow]") {
 
     std::vector<int> n_values = {10, 15, 20, 30, 40, 60, 80, 120};
     int k = 8;
@@ -36,7 +36,7 @@ TEST_CASE("Henon Heiles", "[henonheiles]") {
     }
 }
 
-TEST_CASE("Henon Heiles 2", "[henonheiles2]") {
+TEST_CASE("Henon Heiles 2", "[henonheiles2][slow]") {
 
     std::vector<int> n_values = {60, 120};
     int k = 100;
@@ -65,7 +65,7 @@ TEST_CASE("Henon Heiles 2", "[henonheiles2]") {
     }
 }
 
-TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation]") {
+TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation][slow]") {
     int n = 30;
     int N = 10;
 
