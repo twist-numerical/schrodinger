@@ -9,59 +9,27 @@ using namespace schrodinger;
 using namespace schrodinger::geometry;
 
 TEST_CASE("Henon Heiles", "[henonheiles][slow]") {
+    int n = 40;
+    int N = 15;
 
-    std::vector<int> n_values = {10, 15, 20, 30, 40, 60, 80, 120};
-    int k = 8;
+    Schrodinger2D<double> s([](double x, double y) { return x*x + y*y + sqrt(5)/10 * (x*y*y - x*x*x / 3); },
+                            Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
+                            Options{
+                                    .gridSize={.x=n, .y=n},
+                                    .maxBasisSize=N
+                            });
 
-    for (int n: n_values) {
-        int N = 20;
+    auto eigenfunctions = s.eigenfunctions();
 
-        // Schrodinger2D<double> s([](double x, double y) { return (1 + x*x) * (1 + y*y); },
-        //                         Rectangle<double, 2>{-5.5, 5.5, -5.5, 5.5},
-        Schrodinger2D<double> s([](double x, double y) { return x*x + y*y + sqrt(5)/10 * (x*y*y - x*x*x / 3); },
-                                Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
-                                Options{
-                                        .gridSize={.x=n, .y=n},
-                                        .maxBasisSize=N
-                                });
+    // Sort eigenfunctions
+    std::function<bool(std::pair<double, Schrodinger2D<double>::Eigenfunction>, std::pair<double, Schrodinger2D<double>::Eigenfunction>)> comp =
+            [](auto a, auto b) {return a.first < b.first;};
+    std::sort(eigenfunctions.begin(), eigenfunctions.end(), comp);
 
-        // Write out eigenvalues
-        std::vector<double> eigenvalues = s.eigenvalues();
-        printf("[");
-        for (int i = 0; i < k; i++) {
-            printf("%.16f", eigenvalues[i]);
-            if (i != k-1) printf(", ");
-        }
-        printf("],\n");
-    }
-}
-
-TEST_CASE("Henon Heiles 2", "[henonheiles2][slow]") {
-
-    std::vector<int> n_values = {60, 120};
-    int k = 100;
-
-    for (int n: n_values) {
-        int N = 20;
-
-        // Schrodinger2D<double> s([](double x, double y) { return (1 + x*x) * (1 + y*y); },
-        //                         Rectangle<double, 2>{-5.5, 5.5, -5.5, 5.5},
-        Schrodinger2D<double> s([](double x, double y) { return x*x + y*y + sqrt(5)/10 * (x*y*y - x*x*x / 3); },
-                                Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
-                                Options{
-                                        .gridSize={.x=n, .y=n},
-                                        .maxBasisSize=N
-                                });
-
-        // Write out eigenvalues
-        std::vector<double> eigenvalues = s.eigenvalues();
-        printf("Num eigenvalues: %d\n", (int)eigenvalues.size());
-        printf("[");
-        for (int i = 0; i < k; i++) {
-            printf("%.16f", eigenvalues[i]);
-            if (i != k-1) printf(", ");
-        }
-        printf("],\n");
+    for (int i = 0; i < 4; i++) {
+        double E = eigenfunctions[i].first;
+        Schrodinger2D<double>::Eigenfunction phi = eigenfunctions[i].second;
+        printf("Eigenvalue: %f\n", E);
     }
 }
 

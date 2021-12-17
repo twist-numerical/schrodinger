@@ -29,8 +29,18 @@ public:
         Eigen::EigenSolver<MatrixXs> eigenSolver;
         eigenSolver.compute(G, withEigenvectors);
         m_eigenvalues = eigenSolver.eigenvalues();
-        if constexpr (withEigenvectors)
-            m_eigenvectors = svd.matrixV().adjoint() * eigenSolver.eigenvectors();
+        if constexpr (withEigenvectors) {
+            // m_eigenvectors = svd.matrixV().adjoint() * eigenSolver.eigenvectors();
+            m_eigenvectors = svd.matrixV() * eigenSolver.eigenvectors();
+
+            // check valid
+            for (int i = 0; i < m_eigenvectors.cols(); i++) {
+                Scalar E = m_eigenvalues.real()(i);
+                VectorXs v = m_eigenvectors.real().col(i);
+                VectorXs residue = A*v - E * (B * v);
+                printf("Eigenvalue: %f, residue avg: %f, residue norm: %f\n", E, residue.sum() / residue.size(), residue.norm());
+            }
+        }
     }
 
     const VectorXcs &eigenvalues() {

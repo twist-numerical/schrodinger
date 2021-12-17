@@ -247,7 +247,6 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
             // Normalize eigenfunction
             VectorXs coeffs = kernel * vectors.col(i).real();
 
-            /*
             Scalar sum = 0;
             for (auto& intersection : self->intersections) {
                 // Calculate function value in intersection
@@ -262,12 +261,11 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
 
             Scalar factor = sqrt(self->intersections.size()) / sqrt(sum);
             // printf("Total sum: %f, num intersections: %d\n", (double)sum, (int)self->intersections.size());
-             */
 
             eigenfunctions.emplace_back(
                     values[i].real(),
                     typename Schrodinger2D<Scalar>::Eigenfunction{
-                            self, values[i].real(), coeffs}
+                            self, values[i].real(), factor * coeffs}
             );
         }
         return eigenfunctions;
