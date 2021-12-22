@@ -20,6 +20,9 @@ class RectangularPencil {
     MatrixXcs m_eigenvectors;
 public:
     RectangularPencil(const MatrixType &A, const MatrixType &B) {
+
+        // Original method
+        /*
         Eigen::BDCSVD<MatrixType> svd;
         svd.compute(B, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
@@ -32,15 +35,28 @@ public:
         if constexpr (withEigenvectors) {
             // m_eigenvectors = svd.matrixV().adjoint() * eigenSolver.eigenvectors();
             m_eigenvectors = svd.matrixV() * eigenSolver.eigenvectors();
-
-            // check valid
-            for (int i = 0; i < m_eigenvectors.cols(); i++) {
-                Scalar E = m_eigenvalues.real()(i);
-                VectorXs v = m_eigenvectors.real().col(i);
-                VectorXs residue = A*v - E * (B * v);
-                printf("Eigenvalue: %f, residue avg: %f, residue norm: %f\n", E, residue.sum() / residue.size(), residue.norm());
-            }
         }
+         */
+
+        // Trucated SVDs method
+        Eigen::BDCSVD<MatrixType> svdA;
+        svdA.compute(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        MatrixXs A_trunc = svdA.matrixU() * svdA.singularValues().array().topRows(svdA.rank()).matrix().asDiagonal() * svdA.matrixV().adjoint();
+
+        Eigen::BDCSVD<MatrixType> svdB;
+        svdB.compute(B, Eigen::ComputeThinU | Eigen::ComputeThinV);
+
+        MatrixXs G = svdB.matrixU().adjoint() * A_trunc * svdB.matrixV();
+        G *= svdB.singularValues().array().topRows(svdB.rank()).inverse().matrix().asDiagonal();
+
+        Eigen::EigenSolver<MatrixXs> eigenSolver;
+        eigenSolver.compute(G, withEigenvectors);
+        m_eigenvalues = eigenSolver.eigenvalues();
+        if constexpr (withEigenvectors) {
+            // m_eigenvectors = svd.matrixV().adjoint() * eigenSolver.eigenvectors();
+            m_eigenvectors = svdB.matrixV() * eigenSolver.eigenvectors();
+        }
+
     }
 
     const VectorXcs &eigenvalues() {
