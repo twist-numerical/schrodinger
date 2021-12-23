@@ -349,6 +349,8 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) cons
         return fy0(0);
     }
 
+    assert(false);
+
     Matrix<Scalar, 2, 1> wx, wy;
     Scalar nx = 2 / (hx * x1 - x1 * x1);
     wx << (2 * hx - 3 * x1) * nx / hx, -2 * nx, nx, -(hx - 3 * x1) * nx / hx;

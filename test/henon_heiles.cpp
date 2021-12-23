@@ -26,7 +26,7 @@ TEST_CASE("Henon Heiles", "[henonheiles][slow]") {
             [](auto a, auto b) {return a.first < b.first;};
     std::sort(eigenfunctions.begin(), eigenfunctions.end(), comp);
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 20; i++) {
         double E = eigenfunctions[i].first;
         Schrodinger2D<double>::Eigenfunction phi = eigenfunctions[i].second;
         printf("Eigenvalue: %f\n", E);
@@ -34,8 +34,8 @@ TEST_CASE("Henon Heiles", "[henonheiles][slow]") {
 }
 
 TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation][slow]") {
-    int n = 30;
-    int N = 10;
+    int n = 25;
+    int N = 25;
 
     Schrodinger2D<double> s([](double x, double y) { return x*x + y*y + sqrt(5)/10 * (x*y*y - x*x*x / 3); },
                             Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
@@ -44,10 +44,10 @@ TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation][slow]") {
                                     .maxBasisSize=N
                             });
 
-    Schrodinger2D<double> c([](double x, double y) { return x * x + y * y + sqrt(5) / 10 * (x * y * y - x * x * x / 3); },
+    Schrodinger2D<double> c([](double x, double y) { return x*x + y*y + sqrt(5)/10 * (x*y*y - x*x*x / 3); },
                             Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
                             Options{
-                                    .gridSize={.x=4*n+3, .y=4*n+3},
+                                    .gridSize={.x=3*n+2, .y=3*n+2},
                                     .maxBasisSize=N
                             });
 
@@ -80,23 +80,6 @@ TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation][slow]") {
 
         printf("Eigenvalue: %f, %f\n", p.first, p2.first);
 
-        // Rel error of grid point
-        double val1 = p.second(x, y);
-        double val2 = p2.second(x, y);
-
-        double sum1 = 0;
-        for (auto& intersection : s.intersections) {
-            // Calculate function value in intersection
-            double functionVal = p.second(intersection.position.x, intersection.position.y);
-            sum1 += functionVal*functionVal;
-        }
-        double sum2 = 0;
-        for (auto& intersection : c.intersections) {
-            // Calculate function value in intersection
-            double functionVal = p2.second(intersection.position.x, intersection.position.y);
-            sum2 += functionVal*functionVal;
-        }
-
         // Just print out all the values
         for (int i = 0; i < s.grid.x.size(); i++) {
             double xp = s.grid.x(i);
@@ -123,17 +106,6 @@ TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation][slow]") {
         printf("\n");
 
         return;
-
-        printf("Total sum 1: %f\n", sum1);
-        printf("Total sum 2: %f\n", sum2);
-
-        printf("Val1: %f, val2: %f\n", val1, val2);
-
-        double err = abs((val1 - val2) / val2);
-
-        printf("Rel err: %f\n", err);
-
-
 
     }
 

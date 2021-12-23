@@ -22,7 +22,7 @@ public:
     RectangularPencil(const MatrixType &A, const MatrixType &B) {
 
         // Original method
-        /*
+/*
         Eigen::BDCSVD<MatrixType> svd;
         svd.compute(B, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
@@ -36,25 +36,32 @@ public:
             // m_eigenvectors = svd.matrixV().adjoint() * eigenSolver.eigenvectors();
             m_eigenvectors = svd.matrixV() * eigenSolver.eigenvectors();
         }
-         */
+*/
 
-        // Trucated SVDs method
+        // Trucated SVDs method (rank M truncation)
+        int M = 200;
+
         Eigen::BDCSVD<MatrixType> svdA;
         svdA.compute(A, Eigen::ComputeThinU | Eigen::ComputeThinV);
-        MatrixXs A_trunc = svdA.matrixU() * svdA.singularValues().array().topRows(svdA.rank()).matrix().asDiagonal() * svdA.matrixV().adjoint();
+        MatrixXs A_Ut = svdA.matrixU().leftCols(M);
+        MatrixXs A_St = svdA.singularValues().head(M).asDiagonal();
+        MatrixXs A_Vt = svdA.matrixV().leftCols(M);
 
         Eigen::BDCSVD<MatrixType> svdB;
         svdB.compute(B, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        printf("U: %ld, %ld; V: %ld, %ld\n", svdB.matrixU().rows(), svdB.matrixU().cols(), svdB.matrixV().rows(), svdB.matrixV().cols());
+        MatrixXs B_Ut = svdB.matrixU().leftCols(M);
+        MatrixXs B_St = svdB.singularValues().head(M);
+        MatrixXs B_Vt = svdB.matrixV().leftCols(M);
 
-        MatrixXs G = svdB.matrixU().adjoint() * A_trunc * svdB.matrixV();
-        G *= svdB.singularValues().array().topRows(svdB.rank()).inverse().matrix().asDiagonal();
+        MatrixXs G = B_Ut.adjoint() * A_Ut * A_St * A_Vt.adjoint() * svdB.matrixV();
+        G *= B_St.array().inverse().matrix().asDiagonal();
 
         Eigen::EigenSolver<MatrixXs> eigenSolver;
         eigenSolver.compute(G, withEigenvectors);
         m_eigenvalues = eigenSolver.eigenvalues();
         if constexpr (withEigenvectors) {
-            // m_eigenvectors = svd.matrixV().adjoint() * eigenSolver.eigenvectors();
-            m_eigenvectors = svdB.matrixV() * eigenSolver.eigenvectors();
+            m_eigenvectors = B_Vt * eigenSolver.eigenvectors();
         }
 
     }
