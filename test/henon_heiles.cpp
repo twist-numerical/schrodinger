@@ -26,7 +26,7 @@ TEST_CASE("Henon Heiles", "[henonheiles][slow]") {
             [](auto a, auto b) {return a.first < b.first;};
     std::sort(eigenfunctions.begin(), eigenfunctions.end(), comp);
 
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < (int)eigenfunctions.size(); i++) {
         double E = eigenfunctions[i].first;
         Schrodinger2D<double>::Eigenfunction phi = eigenfunctions[i].second;
         printf("Eigenvalue: %f\n", E);
