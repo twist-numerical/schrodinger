@@ -23,6 +23,7 @@ public:
 
         // Original method
 
+        /*
         Eigen::BDCSVD<MatrixType> svd;
         svd.compute(B, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
@@ -38,16 +39,24 @@ public:
             // m_eigenvectors = svd.matrixV().adjoint() * eigenSolver.eigenvectors();
             m_eigenvectors = svd.matrixV() * eigenSolver.eigenvectors();
         }
+         */
 
 
         // Trucated SVDs method (rank M truncation)
+
         /*
-        int M = 205;
+        // Determine rank of A - lambda*B
+        Eigen::ColPivHouseholderQR<MatrixType> QR(A+20*B);
+        int r = QR.rank();
+        printf("Rank %d\n", r);
 
         printf("A: %ld, %ld\n", A.rows(), A.cols());
         printf("B: %ld, %ld\n", B.rows(), B.cols());
         Eigen::BDCSVD<MatrixType> svdA;
         svdA.compute(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+        int M = svdA.matrixU().cols() - 0;
+
         for (int i = 0; i < svdA.singularValues().size(); i++) {
             printf("%f ", svdA.singularValues()(i));
         }
@@ -73,8 +82,54 @@ public:
         m_eigenvalues = eigenSolver.eigenvalues();
         if constexpr (withEigenvectors) {
             m_eigenvectors = B_Vt * eigenSolver.eigenvectors();
+
+            // Double-check eigenvalues to filter out the wrong ones
+            for (int i = 0; i < m_eigenvalues.size(); i++) {
+                VectorXcs v = m_eigenvectors.col(i);
+                std::complex<Scalar> E = m_eigenvalues(i);
+                VectorXcs res = A * v - E*B*v;
+
+                printf("Eigenvalue: %f+%fi, vector error %f\n", E.real(), E.imag(), res.norm());
+            }
         }
          */
+
+        // Algorithm 3
+        int m = A.rows();
+        int n = A.cols();
+        MatrixType BA = MatrixType::Zero(m, n*2);
+        BA.block(0, 0, m, n) = A;
+        BA.block(0, n, m, n) = B;
+
+        printf("m = %d, n = %d\n", m, n);
+
+        Eigen::BDCSVD<MatrixType> svd;
+        svd.compute(BA, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+        // Rank-M truncation
+        int M = std::min(m, n) - 0;
+        printf("Matrix V: %dx%d\n", (int)svd.matrixV().rows(), (int)svd.matrixV().cols());
+        MatrixXs Vt = svd.matrixV().leftCols(M);
+
+        // Another SVD
+        MatrixXs V_12 = MatrixType::Zero(n, 2*M);
+        V_12.block(0, 0, n, M) = Vt.topRows(n);
+        V_12.block(0, M, n, M) = Vt.bottomRows(n);
+        Eigen::BDCSVD<MatrixXs> svdV;
+        svdV.compute(V_12, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+        MatrixXs V_V = svdV.matrixV();
+        printf("Matrix V: %dx%d\n", (int)V_V.rows(), (int)V_V.cols());
+        MatrixXs V1_t = V_V.block(0, 0, M, M);
+        MatrixXs V2_t = V_V.block(M, 0, M, M);
+
+        Eigen::GeneralizedEigenSolver<MatrixXs> ges;
+        ges.compute(V1_t, V2_t);
+
+        m_eigenvalues = ges.eigenvalues();
+        if constexpr (withEigenvectors) {
+            m_eigenvectors = ges.eigenvectors();
+        }
 
         /*
         // Method: https://www.keisu.t.u-tokyo.ac.jp/data/2014/METR14-27.pdf

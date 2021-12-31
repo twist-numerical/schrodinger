@@ -9,11 +9,16 @@ using namespace schrodinger;
 using namespace schrodinger::geometry;
 
 TEST_CASE("Henon Heiles", "[henonheiles][slow]") {
-    int n = 40;
-    int N = 15;
+    // int n = 40;
+    // int N = 15;
 
+
+    int n = 15;
+    int N = 15;
     Schrodinger2D<double> s([](double x, double y) { return x*x + y*y + sqrt(5)/10 * (x*y*y - x*x*x / 3); },
                             Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
+    // Schrodinger2D<double> s([](double x, double y) { return (1+x*x)*(1+y*y); },
+    //                         Rectangle<double, 2>{-5.5, 5.5, -5.5, 5.5},
                             Options{
                                     .gridSize={.x=n, .y=n},
                                     .maxBasisSize=N
