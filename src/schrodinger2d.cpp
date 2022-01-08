@@ -224,7 +224,8 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
 
     MatrixXs crossingsMatch(rows, colsX + colsY);
     crossingsMatch << beta_x, -beta_y;
-    MatrixXs kernel = schrodinger::internal::rightKernel<MatrixXs>(crossingsMatch, 1e-3);
+    MatrixXs kernel = schrodinger::internal::rightKernel<MatrixXs>(crossingsMatch, 1e-8);
+    printf("Kernel: %dx%d -> %dx%d\n", (int)rows, (int)(colsX + colsY), (int)kernel.rows(), (int)kernel.cols());
 
     MatrixXs A(rows, colsX + colsY); // rows x (colsX + colsY)
     A << beta_x * lambda_x.asDiagonal(), beta_y * lambda_y.asDiagonal();

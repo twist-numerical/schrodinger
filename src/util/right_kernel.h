@@ -12,6 +12,11 @@ namespace schrodinger::internal {
             Eigen::MatrixBase<Derived>::MaxColsAtCompileTime, Eigen::MatrixBase<Derived>::MaxColsAtCompileTime>
     rightKernel(const Eigen::MatrixBase<Derived> &A,
                 typename Eigen::NumTraits<typename Eigen::MatrixBase<Derived>::Scalar>::Real threshold) {
+
+
+/*
+        // Householder method
+
         typedef typename Eigen::MatrixBase<Derived> MatrixType;
         typedef typename MatrixType::Scalar Scalar;
         typedef typename Eigen::NumTraits<Scalar>::Real RealScalar;
@@ -50,6 +55,24 @@ namespace schrodinger::internal {
         assert(j == count);
 
         return K;
+
+*/
+
+        // SVD method
+        // typedef typename Eigen::MatrixBase<Derived> MatrixType;
+        int rows = A.rows();
+        int cols = A.cols();
+
+        Eigen::BDCSVD<Derived> svd;
+        svd.setThreshold(threshold);
+        svd.compute(A, Eigen::ComputeFullV);
+
+        int rank = svd.rank();
+        rank = 225;
+        int kernelSize = cols - rank;
+        printf("Matrix A: %dx%d, rank: %d, kernel: %d\n", rows, cols, rank, kernelSize);
+        return svd.matrixV().rightCols(kernelSize);
+
     }
 
 }

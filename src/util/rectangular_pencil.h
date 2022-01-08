@@ -44,37 +44,29 @@ public:
 
         // Trucated SVDs method (rank M truncation)
 
-        /*
+
         // Determine rank of A - lambda*B
         Eigen::ColPivHouseholderQR<MatrixType> QR(A+20*B);
         int r = QR.rank();
         printf("Rank %d\n", r);
 
-        printf("A: %ld, %ld\n", A.rows(), A.cols());
-        printf("B: %ld, %ld\n", B.rows(), B.cols());
+        printf("A, B: %dx%d\n", (int)A.rows(), (int)A.cols());
+        int M = std::min(A.rows(), A.cols()) - 1;
+
         Eigen::BDCSVD<MatrixType> svdA;
         svdA.compute(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
-        int M = svdA.matrixU().cols() - 0;
-
-        for (int i = 0; i < svdA.singularValues().size(); i++) {
-            printf("%f ", svdA.singularValues()(i));
-        }
-        printf("\n");
-
-        printf("A U: %ld, %ld; V: %ld, %ld\n", svdA.matrixU().rows(), svdA.matrixU().cols(), svdA.matrixV().rows(), svdA.matrixV().cols());
         MatrixXs A_Ut = svdA.matrixU().leftCols(M);
         MatrixXs A_St = svdA.singularValues().head(M).asDiagonal();
         MatrixXs A_Vt = svdA.matrixV().leftCols(M);
 
         Eigen::BDCSVD<MatrixType> svdB;
         svdB.compute(B, Eigen::ComputeFullU | Eigen::ComputeFullV);
-        printf("B U: %ld, %ld; V: %ld, %ld\n", svdB.matrixU().rows(), svdB.matrixU().cols(), svdB.matrixV().rows(), svdB.matrixV().cols());
         MatrixXs B_Ut = svdB.matrixU().leftCols(M);
-        MatrixXs B_St = svdB.singularValues().head(M);
+        VectorXs B_St = svdB.singularValues().head(M);
         MatrixXs B_Vt = svdB.matrixV().leftCols(M);
 
-        MatrixXs G = B_Ut.adjoint() * A_Ut * A_St * A_Vt.adjoint() * svdB.matrixV();
+        MatrixXs G = B_Ut.adjoint() * A_Ut * A_St * A_Vt.adjoint() * B_Vt;
         G *= B_St.array().inverse().matrix().asDiagonal();
 
         Eigen::EigenSolver<MatrixXs> eigenSolver;
@@ -85,15 +77,15 @@ public:
 
             // Double-check eigenvalues to filter out the wrong ones
             for (int i = 0; i < m_eigenvalues.size(); i++) {
-                VectorXcs v = m_eigenvectors.col(i);
+                VectorXcs v = m_eigenvectors.col(i).normalized();
                 std::complex<Scalar> E = m_eigenvalues(i);
                 VectorXcs res = A * v - E*B*v;
 
-                printf("Eigenvalue: %f+%fi, vector error %f\n", E.real(), E.imag(), res.norm());
+                printf("Eigenvalue: %f+%fi, vector error %f\n", E.real(), E.imag(), res.template lpNorm<2>());
             }
         }
-         */
 
+/*
         // Algorithm 3
         int m = A.rows();
         int n = A.cols();
@@ -130,6 +122,7 @@ public:
         if constexpr (withEigenvectors) {
             m_eigenvectors = ges.eigenvectors();
         }
+        */
 
         /*
         // Method: https://www.keisu.t.u-tokyo.ac.jp/data/2014/METR14-27.pdf
