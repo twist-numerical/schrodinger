@@ -14,7 +14,7 @@ namespace schrodinger::internal {
                 typename Eigen::NumTraits<typename Eigen::MatrixBase<Derived>::Scalar>::Real threshold) {
 
 
-/*
+
         // Householder method
 
         typedef typename Eigen::MatrixBase<Derived> MatrixType;
@@ -56,8 +56,8 @@ namespace schrodinger::internal {
 
         return K;
 
-*/
 
+/*
         // SVD method
         // typedef typename Eigen::MatrixBase<Derived> MatrixType;
         int rows = A.rows();
@@ -72,7 +72,7 @@ namespace schrodinger::internal {
         int kernelSize = cols - rank;
         printf("Matrix A: %dx%d, rank: %d, kernel: %d\n", rows, cols, rank, kernelSize);
         return svd.matrixV().rightCols(kernelSize);
-
+*/
     }
 
 }

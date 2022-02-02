@@ -56,12 +56,18 @@ public:
         Eigen::BDCSVD<MatrixType> svdA;
         svdA.compute(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
+        Eigen::BDCSVD<MatrixType> svdB;
+        svdB.compute(B, Eigen::ComputeFullU | Eigen::ComputeFullV);
+
+        printf("Rank of A: %d\n", (int)svdA.rank());
+        printf("Rank of B: %d\n", (int)svdB.rank());
+
+        M = (int)svdB.rank();
+
         MatrixXs A_Ut = svdA.matrixU().leftCols(M);
         MatrixXs A_St = svdA.singularValues().head(M).asDiagonal();
         MatrixXs A_Vt = svdA.matrixV().leftCols(M);
 
-        Eigen::BDCSVD<MatrixType> svdB;
-        svdB.compute(B, Eigen::ComputeFullU | Eigen::ComputeFullV);
         MatrixXs B_Ut = svdB.matrixU().leftCols(M);
         VectorXs B_St = svdB.singularValues().head(M);
         MatrixXs B_Vt = svdB.matrixV().leftCols(M);
@@ -73,12 +79,21 @@ public:
         eigenSolver.compute(G, withEigenvectors);
         m_eigenvalues = eigenSolver.eigenvalues();
         if constexpr (withEigenvectors) {
+            VectorXcs Ev = m_eigenvalues;
+
             m_eigenvectors = B_Vt * eigenSolver.eigenvectors();
+
+            // argsort values
+            std::vector<size_t> idx(m_eigenvalues.size());
+            for (int i = 0; i < m_eigenvalues.size(); i++) idx[i] = i;
+            std::stable_sort(idx.begin(), idx.end(),
+                        [&Ev](size_t i1, size_t i2) {return Ev(i1).real() < Ev(i2).real();});
 
             // Double-check eigenvalues to filter out the wrong ones
             for (int i = 0; i < m_eigenvalues.size(); i++) {
-                VectorXcs v = m_eigenvectors.col(i).normalized();
-                std::complex<Scalar> E = m_eigenvalues(i);
+                int ii = (int)idx[i];
+                VectorXcs v = m_eigenvectors.col(ii).normalized();
+                std::complex<Scalar> E = m_eigenvalues(ii);
                 VectorXcs res = A * v - E*B*v;
 
                 printf("Eigenvalue: %f+%fi, vector error %f\n", E.real(), E.imag(), res.template lpNorm<2>());
