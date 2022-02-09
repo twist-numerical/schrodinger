@@ -9,12 +9,12 @@ using namespace schrodinger;
 using namespace schrodinger::geometry;
 
 TEST_CASE("Henon Heiles", "[henonheiles][slow]") {
-    //int n = 40;
-    //int N = 15;
+    // int n = 20;
+    // int N = 10;
 
 
-    int n = 18;
-    int N = 15;
+    int n = 120;
+    int N = 20;
     //Schrodinger2D<double> s([](double x, double y) { return x*x + y*y + sqrt(5)/10 * (x*y*y - x*x*x / 3); },
     //                        Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
     Schrodinger2D<double> s([](double x, double y) { return (1+x*x)*(1+y*y); },
@@ -31,11 +31,25 @@ TEST_CASE("Henon Heiles", "[henonheiles][slow]") {
             [](auto a, auto b) {return a.first < b.first;};
     std::sort(eigenfunctions.begin(), eigenfunctions.end(), comp);
 
-    for (int i = 0; i < (int)eigenfunctions.size(); i++) {
-        double E = eigenfunctions[i].first;
-        Schrodinger2D<double>::Eigenfunction phi = eigenfunctions[i].second;
-        printf("Eigenvalue: %f\n", E);
+
+    // Ixaru reference eigenvalues
+    double E_ref[] = {3.1959181, 5.5267439, 5.5267439, 7.5578033, 8.0312723, 8.4445814, 9.9280611, 9.9280611,
+                     11.3118171, 11.3118171, 12.1032536, 12.2011790, 13.3323313};
+
+    printf("Num eigenvalues: %d\n", (int) eigenfunctions.size());
+    int eig_index = 0;
+    for (auto & eigenfunction : eigenfunctions) {
+        double E = eigenfunction.first;
+        Schrodinger2D<double>::Eigenfunction phi = eigenfunction.second;
+
+        if (eig_index < 13 && std::abs(E - E_ref[eig_index]) < 1)
+            printf("Eigenvalue: %f, error %g\n", E, std::abs(E-E_ref[eig_index++]));
+        else
+            printf("Eigenvalue: %f\n", E);
     }
+
+    printf("\n");
+    for (auto & eigenfunction : eigenfunctions) printf("%.17f\n", eigenfunction.first);
 }
 
 TEST_CASE("test_pencil", "") {
@@ -93,7 +107,6 @@ TEST_CASE("test_pencil", "") {
     eigenSolver.compute(G);
     std::cout << "Eigenvalues:" << std::endl;
     std::cout << eigenSolver.eigenvalues() << std::endl;
-
 }
 
 TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation][slow]") {

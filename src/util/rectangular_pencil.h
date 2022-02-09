@@ -6,6 +6,7 @@
 #include <Eigen/Eigenvalues>
 #include <type_traits>
 #include <string>
+#include <cstdio>
 
 template<bool withEigenvectors, typename MatrixType>
 class RectangularPencil {
@@ -41,38 +42,61 @@ public:
         }
          */
 
+        // Row truncation method
+        /*
+        int M = std::min(A.rows(), A.cols());
+        MatrixXs A_trunc = A.topLeftCorner(M,M);
+        MatrixXs B_trunc = B.topLeftCorner(M,M);
 
-        // Trucated SVDs method (rank M truncation)
+        Eigen::GeneralizedEigenSolver<MatrixXs> ges;
+        ges.compute(A_trunc, B_trunc);
 
+        m_eigenvalues = ges.eigenvalues();
+        if constexpr (withEigenvectors) {
+            m_eigenvectors = ges.eigenvectors();
+        }
+         */
 
+        // Truncated SVDs method (rank M truncation)
+        /*
         // Determine rank of A - lambda*B
-        Eigen::ColPivHouseholderQR<MatrixType> QR(A+20*B);
-        int r = QR.rank();
-        printf("Rank %d\n", r);
+        Scalar threshold = 1e-8;
 
-        printf("A, B: %dx%d\n", (int)A.rows(), (int)A.cols());
-        int M = std::min(A.rows(), A.cols()) - 1;
+        Eigen::BDCSVD<MatrixType> rankSvd;
+        rankSvd.setThreshold(threshold);
+        rankSvd.compute(A + 20 * B);
+        int r = rankSvd.rank();
+
+        printf("Solving pencil, A, B: %dx%d\n", (int)A.rows(), (int)A.cols());
+        printf("Pencil normal rank %d\n", r);
 
         Eigen::BDCSVD<MatrixType> svdA;
+        svdA.setThreshold(threshold);
         svdA.compute(A, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
         Eigen::BDCSVD<MatrixType> svdB;
+        svdB.setThreshold(threshold);
         svdB.compute(B, Eigen::ComputeFullU | Eigen::ComputeFullV);
 
         printf("Rank of A: %d\n", (int)svdA.rank());
         printf("Rank of B: %d\n", (int)svdB.rank());
 
-        M = (int)svdB.rank();
+        int M = (int)svdB.rank();
 
-        MatrixXs A_Ut = svdA.matrixU().leftCols(M);
-        MatrixXs A_St = svdA.singularValues().head(M).asDiagonal();
-        MatrixXs A_Vt = svdA.matrixV().leftCols(M);
+
+//        MatrixXs A_Ut = svdA.matrixU().leftCols(M);
+//        MatrixXs A_St = svdA.singularValues().head(M).asDiagonal();
+//        MatrixXs A_Vt = svdA.matrixV().leftCols(M);
 
         MatrixXs B_Ut = svdB.matrixU().leftCols(M);
         VectorXs B_St = svdB.singularValues().head(M);
         MatrixXs B_Vt = svdB.matrixV().leftCols(M);
 
-        MatrixXs G = B_Ut.adjoint() * A_Ut * A_St * A_Vt.adjoint() * B_Vt;
+        // (r x m) * (m x r) * (r x r) * (r x n) * (n x r) * (r x r)
+        // MatrixXs G = B_Ut.adjoint() * A_Ut * A_St * A_Vt.adjoint() * B_Vt;
+
+        // (r x m) * (m x n) * (n x r) * (r x r)
+        MatrixXs G = B_Ut.adjoint() * A * B_Vt;
         G *= B_St.array().inverse().matrix().asDiagonal();
 
         Eigen::EigenSolver<MatrixXs> eigenSolver;
@@ -99,6 +123,44 @@ public:
                 printf("Eigenvalue: %f+%fi, vector error %f\n", E.real(), E.imag(), res.template lpNorm<2>());
             }
         }
+         */
+
+        // New truncation method
+
+        Scalar threshold = 1e-10;
+
+        Eigen::BDCSVD<MatrixType> svdB;
+        svdB.setThreshold(threshold);
+        svdB.compute(B, Eigen::ComputeThinU | Eigen::ComputeThinV);
+
+        // printf("Rank of B: %d\n", (int)svdB.rank());
+
+        int r = (int)svdB.rank();
+        MatrixXs B_Ut = svdB.matrixU().leftCols(r);
+        VectorXs B_St = svdB.singularValues().head(r);
+        MatrixXs B_Vt = svdB.matrixV().leftCols(r);
+
+        // (r x m) * (m x n) * (n x r) * (r x r)
+        MatrixXs G = B_Ut.adjoint() * A * B_Vt;
+        G *= B_St.array().inverse().matrix().asDiagonal();
+
+        Eigen::EigenSolver<MatrixXs> eigenSolver;
+        eigenSolver.compute(G, withEigenvectors);
+        m_eigenvalues = eigenSolver.eigenvalues();
+        if constexpr (withEigenvectors) {
+            m_eigenvectors = B_Vt * eigenSolver.eigenvectors();
+        }
+
+        /*
+        // Write A and B to file
+        FILE* fh = fopen("matA.csv", "w+"); fprintf(fh, "Matrix %dx%d\n", (int)A.rows(), (int)A.cols());
+        for (int i = 0; i < A.rows(); i++) for (int j = 0; j < A.cols(); j++) fprintf(fh, "%.17g%s", A(i,j), j == A.cols()-1?"\n":", ");
+        fclose(fh);
+
+        fh = fopen("matB.csv", "w+"); fprintf(fh, "Matrix %dx%d\n", (int)B.rows(), (int)B.cols());
+        for (int i = 0; i < B.rows(); i++) for (int j = 0; j < B.cols(); j++) fprintf(fh, "%.17g%s", B(i,j), j == B.cols()-1?"\n":", ");
+        fclose(fh);
+         */
 
 /*
         // Algorithm 3
