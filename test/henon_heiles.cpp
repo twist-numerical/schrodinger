@@ -13,8 +13,8 @@ TEST_CASE("Henon Heiles", "[henonheiles][slow]") {
     // int N = 10;
 
 
-    int n = 120;
-    int N = 20;
+    int n = 60;
+    int N = 15;
     //Schrodinger2D<double> s([](double x, double y) { return x*x + y*y + sqrt(5)/10 * (x*y*y - x*x*x / 3); },
     //                        Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
     Schrodinger2D<double> s([](double x, double y) { return (1+x*x)*(1+y*y); },
@@ -47,9 +47,6 @@ TEST_CASE("Henon Heiles", "[henonheiles][slow]") {
         else
             printf("Eigenvalue: %f\n", E);
     }
-
-    printf("\n");
-    for (auto & eigenfunction : eigenfunctions) printf("%.17f\n", eigenfunction.first);
 }
 
 TEST_CASE("test_pencil", "") {

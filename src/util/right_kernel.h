@@ -68,7 +68,7 @@ namespace schrodinger::internal {
         svd.compute(A, Eigen::ComputeFullV);
 
         int rank = svd.rank();
-        rank = 225;
+        // rank = 1700;
         int kernelSize = cols - rank;
         printf("Matrix A: %dx%d, rank: %d, kernel: %d\n", rows, cols, rank, kernelSize);
         return svd.matrixV().rightCols(kernelSize);

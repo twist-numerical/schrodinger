@@ -127,7 +127,15 @@ public:
 
         // New truncation method
 
-        Scalar threshold = 1e-10;
+        Scalar threshold = 1e-12;
+
+        if (B.rows() == 0 || B.cols() == 0) {
+            m_eigenvalues(0, 0);
+            if constexpr (withEigenvectors) {
+                m_eigenvectors(0, 0);
+            }
+            return;
+        }
 
         Eigen::BDCSVD<MatrixType> svdB;
         svdB.setThreshold(threshold);
