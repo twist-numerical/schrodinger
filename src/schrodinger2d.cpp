@@ -234,7 +234,7 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
                   ? beta_y * kernel.bottomRows(colsY)
                   : beta_x * kernel.topRows(colsX);
 
-    RectangularPencil<withEigenfunctions, MatrixXs> pencil(A * kernel, BK);
+    RectangularPencil<withEigenfunctions, MatrixXs> pencil(A * kernel, BK, self->options.pencilMethod);
 
 
     if constexpr(withEigenfunctions) {

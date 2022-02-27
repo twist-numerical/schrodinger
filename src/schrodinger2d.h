@@ -20,6 +20,7 @@ namespace schrodinger {
     struct Options {
         PerDirection<int> gridSize = {.x=11, .y=11};
         int maxBasisSize = 22;
+        int pencilMethod = -1;
     };
 
     template<typename Scalar>
