@@ -19,6 +19,27 @@ TEST_CASE("Harmonic potential", "[harmonic]") {
     checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
 }
 
+TEST_CASE("Harmonic potential eigenfunction", "[harmonic]") {
+    Schrodinger2D<double> s([](double x, double y) { return x * x + y * y; },
+                            Rectangle<double, 2>{-8.0, 8.0, -8.0, 8.0},
+                            Options{
+                                    .gridSize={.x=40, .y=40},
+                                    .maxBasisSize=15
+                            });
+
+    auto eigenfunctions = s.eigenfunctions();
+    std::function<bool(std::pair<double, Schrodinger2D<double>::Eigenfunction>, std::pair<double, Schrodinger2D<double>::Eigenfunction>)> comp =
+            [](auto a, auto b) {return a.first < b.first;};
+
+    std::sort(eigenfunctions.begin(), eigenfunctions.end(), comp);
+
+    printf("Eigenvalues:\n");
+    for (int i = 0; i < (int)eigenfunctions.size() && i < (int)eigenfunctions.size(); i++) {
+        printf("%d: %f\n", i, eigenfunctions[i].first);
+    }
+
+}
+
 
 #ifdef SCHRODINGER_LONG_DOUBLE
 
