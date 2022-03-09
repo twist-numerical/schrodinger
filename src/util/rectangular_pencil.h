@@ -166,7 +166,7 @@ public:
             svdB.setThreshold(threshold);
             svdB.compute(B, Eigen::ComputeThinU | Eigen::ComputeThinV);
 
-            // printf("Rank of B: %d\n", (int)svdB.rank());
+            printf("Rank of B: %d\n", (int)svdB.rank());
 
             int r = (int) svdB.rank();
             MatrixXs B_Ut = svdB.matrixU().leftCols(r);

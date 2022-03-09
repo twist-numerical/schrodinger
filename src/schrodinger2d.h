@@ -43,6 +43,7 @@ namespace schrodinger {
         };
 
         struct Intersection {
+            size_t index; // index in the list of intersections
             PerDirection<Scalar> position;
             PerDirection<const Thread *> thread;
             PerDirection<ArrayXs> evaluation;
@@ -81,9 +82,28 @@ namespace schrodinger {
         const Schrodinger2D<Scalar> *problem;
         Scalar E;
         VectorXs c;
+
+        // Function values evaluated in each intersection point
+        PerDirection<VectorXs> functionValues;
+
     public:
         Eigenfunction(const Schrodinger2D *problem, Scalar E, const VectorXs &c)
                 : problem(problem), E(E), c(c) {
+
+            // Initialize function values
+            size_t numIntersections = problem->intersections.size();
+            functionValues.x = VectorXs::Zero(numIntersections);
+            functionValues.y = VectorXs::Zero(numIntersections);
+
+            for (size_t i = 0; i < numIntersections; i++) {
+                Intersection intersection = problem->intersections[i];
+
+                const Thread* tx = intersection.thread.x;
+                functionValues.x(i) = intersection.evaluation.x.matrix().dot(c.segment(tx->offset, tx->eigenpairs.size()));
+
+                const Thread* ty = intersection.thread.y;
+                functionValues.y(i) = intersection.evaluation.y.matrix().dot(c.segment(ty->offset, ty->eigenpairs.size()));
+            }
         }
 
         Scalar operator()(Scalar x, Scalar y) const;

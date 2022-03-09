@@ -52,7 +52,7 @@ computeThread(const std::function<Scalar(Scalar)> &V, Scalar min, Scalar max, si
             .eigenpairs = std::vector<std::pair<Scalar, std::unique_ptr<typename matslise::Matslise<Scalar>::Eigenfunction>>>(),
     };
     if (length == 0) return thread;
-    thread.matslise = make_unique<Matslise<Scalar>>(V, min, max, 1e-15);
+    thread.matslise = make_unique<Matslise<Scalar>>(V, min, max, 1e-12);
     size_t pairs = std::min(maxPairs, (size_t) length);
 
     thread.eigenpairs.reserve(pairs);
@@ -114,6 +114,7 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
             onGrid.col(j++) = (*get<1>(Ef))(subGrid).col(0);
         for (Index i = 0; i < t.gridLength; ++i) {
             intersections.emplace_back(Intersection{
+                    .index=intersections.size(),
                     .position={.x=t.value, .y= grid.y[t.gridOffset + i]},
                     .thread={.x = &t, .y = nullptr},
                     .evaluation={.x = onGrid.row(i)},
@@ -319,11 +320,6 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) cons
     Index iy = highestLowerIndex(problem->grid.y, y);
 
     const Tile &tile = problem->tiles(ix + 1, iy + 1);
-    if (tile.intersections[0] == nullptr
-        || tile.intersections[1] == nullptr
-        || tile.intersections[2] == nullptr
-        || tile.intersections[3] == nullptr)
-        return 0;
 
     Scalar xOffset = problem->grid.x[ix];
     Scalar yOffset = problem->grid.y[iy];
@@ -332,6 +328,18 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) cons
     Scalar hx = problem->grid.x[ix + 1] - xOffset;
     Scalar hy = problem->grid.y[iy + 1] - yOffset;
 
+    // Interpolation with 4 corners
+    ArrayXs corners = ArrayXs::Zero(4);
+    for (int i = 0; i < 4; i++) {
+        if (tile.intersections[i] != nullptr) corners(i) = functionValues.x[tile.intersections[i]->index];
+    }
+
+    x1 /= hx;
+    y1 /= hy;
+
+    return corners(0) * (1-x1)*(1-y1) + corners(1) * x1*(1-y1) + corners(2) * (1-x1)*y1 + corners(3) * x1*y1;
+
+/*
     typedef Array<Scalar, 2, 1> Array2s;
     Array2s xs, ys;
     xs << xOffset + x1, xOffset + hx - x1;
@@ -350,7 +358,6 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) cons
         return fy0(0);
     }
 
-    assert(false);
 
     Matrix<Scalar, 2, 1> wx, wy;
     Scalar nx = 2 / (hx * x1 - x1 * x1);
@@ -374,6 +381,8 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) cons
 
         return (w.inverse() * b)(0);
     }
+
+     */
 }
 
 template
