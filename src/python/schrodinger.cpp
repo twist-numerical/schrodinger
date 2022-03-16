@@ -4,6 +4,8 @@
 #include <pybind11/eigen.h>
 #include <pybind11/numpy.h>
 
+#include <utility>
+
 #include "../schrodinger2d.h"
 
 namespace py = pybind11;
@@ -47,19 +49,23 @@ PYBIND11_MODULE(schrodinger, m) {
     py::class_<KeepAliveEigenfunction>(m, "Eigenfunction2D")
             .def("__call__", [](const KeepAliveEigenfunction &f, double x, double y) {
                 return f.eigenfunction(x, y);
+            })
+            .def("__call__", [](const KeepAliveEigenfunction &f, Schrodinger2D<double>::ArrayXs xs, Schrodinger2D<double>::ArrayXs ys) {
+                return f.eigenfunction(xs, ys);
             });
 
     py::class_<Schrodinger2D<double>, std::shared_ptr<Schrodinger2D<double>>>(m, "Schrodinger2D")
             .def(py::init(
                     [](const std::function<double(double, double)> &V, const Domain<double, 2> &domain,
-                       const std::array<int, 2> &gridSize, int maxBasisSize, int pencilMethod) {
+                       const std::array<int, 2> &gridSize, int maxBasisSize, int pencilMethod, int interpolationMethod) {
                         return std::make_shared<Schrodinger2D<double>>(V, domain, (Options) {
                                 .gridSize = {.x = gridSize[0], .y=gridSize[1]},
                                 .maxBasisSize=maxBasisSize,
-                                .pencilMethod=pencilMethod
+                                .pencilMethod=pencilMethod,
+                                .interpolationMethod=interpolationMethod
                         });
                     }), py::arg("V"), py::arg("domain"), py::arg("gridSize") = std::array<int, 2>{21, 21},
-                 py::arg("maxBasisSize") = 16, py::arg("pencilMethod") = -1)
+                 py::arg("maxBasisSize") = 16, py::arg("pencilMethod") = -1, py::arg("interpolationMethod") = -1)
             .def("eigenvalues", &Schrodinger2D<double>::eigenvalues)
             .def("eigenfunctions", [](std::shared_ptr<const Schrodinger2D<double>> s) {
                 std::vector<std::pair<double, Schrodinger2D<double>::Eigenfunction>> eigs = s->eigenfunctions();

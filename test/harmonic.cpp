@@ -24,7 +24,9 @@ TEST_CASE("Harmonic potential eigenfunction", "[harmonic]") {
                             Rectangle<double, 2>{-8.0, 8.0, -8.0, 8.0},
                             Options{
                                     .gridSize={.x=40, .y=40},
-                                    .maxBasisSize=15
+                                    .maxBasisSize=15,
+                                    .pencilMethod=-1,
+                                    .interpolationMethod=2
                             });
 
     auto eigenfunctions = s.eigenfunctions();
@@ -36,6 +38,21 @@ TEST_CASE("Harmonic potential eigenfunction", "[harmonic]") {
     printf("Eigenvalues:\n");
     for (int i = 0; i < (int)eigenfunctions.size() && i < (int)eigenfunctions.size(); i++) {
         printf("%d: %f\n", i, eigenfunctions[i].first);
+
+        // 100x100 grid
+        Schrodinger2D<double>::ArrayXs xs(100*100);
+        Schrodinger2D<double>::ArrayXs ys(100*100);
+        Array<double, Eigen::Dynamic, 1> grid = Array<double, Eigen::Dynamic, 1>::LinSpaced(100, -8, 8);
+        for (int xi = 0; xi < 100; xi++) {
+            for (int yi = 0; yi < 100; yi++) {
+                xs(xi + 100*yi) = grid(xi);
+                ys(xi + 100*yi) = grid(yi);
+            }
+        }
+
+        Schrodinger2D<double>::ArrayXs funValues = eigenfunctions[i].second(xs, ys);
+
+        printf("Fun values: %f; %f\n", funValues(0), funValues(1));
     }
 
 }

@@ -21,6 +21,7 @@ namespace schrodinger {
         PerDirection<int> gridSize = {.x=11, .y=11};
         int maxBasisSize = 22;
         int pencilMethod = -1;
+        int interpolationMethod = -1;
     };
 
     template<typename Scalar>
@@ -107,6 +108,8 @@ namespace schrodinger {
         }
 
         Scalar operator()(Scalar x, Scalar y) const;
+
+        ArrayXs operator()(ArrayXs x, ArrayXs y) const;
     };
 }
 
