@@ -52,7 +52,7 @@ namespace schrodinger {
 
         struct Tile {
             std::array<Intersection *, 4> intersections = {nullptr, nullptr, nullptr,
-                                                           nullptr}; // [(xmin,ymin), (xmin, ymax), (xmax, ymin), (xmax, ymax)]
+                                                           nullptr}; // [(xmin,ymin), (xmax, ymin), (xmin, ymax), (xmax, ymax)]
         };
 
         PerDirection<ArrayXs> grid;

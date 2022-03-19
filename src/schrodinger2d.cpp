@@ -450,64 +450,80 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
 
         return result;
     }
-    // Plus-shaped (4 points)
+    // Linear interpolation (4 points)
     else if (method == 1) {
-        // Sort the query points per tile
-        size_t tileRows = problem->tiles.rows();
-        size_t tileCols = problem->tiles.cols();
+        Index num_points = xs.size();
 
-        Scalar grid_x0 = problem->grid.x(0);
-        Scalar hx = problem->grid.x(1) - grid_x0;
-        grid_x0 -= hx;
-        Scalar grid_y0 = problem->grid.y(0);
-        Scalar hy = problem->grid.y(1) - grid_y0;
-        grid_y0 -= hy;
+        assert(xs.size() == ys.size());
 
-        std::vector<std::vector<Index>> points_per_tile(tileRows*tileCols, std::vector<Index>());
+        ArrayXs result = ArrayXs::Zero(num_points);
 
-        for (Index i = 0; i < xs.rows(); i++) {
-            size_t tileIndex_x = std::floor((xs(i) - grid_x0) / hx);
-            size_t tileIndex_y = std::floor((ys(i) - grid_y0) / hy);
-            points_per_tile[tileIndex_x + tileIndex_y*tileRows].emplace_back(i);
+        for (int direction = 0; direction < 2; direction++) {
+            // Gather all points on the same horizontal/vertical line
+            std::vector<Index> indices(num_points);
+            for (Index i = 0; i < num_points; i++) indices[i] = i;
+
+            auto& yxs = direction == 0 ? ys : xs;
+
+            std::sort(indices.begin(), indices.end(),
+                      [&yxs](Index i1, Index i2) { return yxs(i1) < yxs(i2); });
+
+            // iterate over each line
+            for (int i = 0; i < num_points; i++) {
+                int start = i;
+                while (i+1 < num_points && yxs[indices[i]] == yxs[indices[i+1]]) i++;
+
+                // Calculate function values on the line
+                Scalar yxVal = yxs[indices[start]];
+
+                Index lineSize = direction == 0 ? problem->tiles.rows() : problem->tiles.cols();
+                VectorXs funValues = ArrayXs::Zero(lineSize + 2);  // some zero values of padding left and right
+
+                Index iyx;
+                if (direction == 0)
+                    iyx = std::floor((yxVal - problem->grid.y(0)) / (problem->grid.y(1) - problem->grid.y(0))) + 1;
+                else
+                    iyx = std::floor((yxVal - problem->grid.x(0)) / (problem->grid.x(1) - problem->grid.x(0))) + 1;
+
+                for (int j = 0; j < lineSize; j++) {
+                    const Tile &tile = direction == 0 ? problem->tiles(j, iyx) : problem->tiles(iyx, j);
+                    if (tile.intersections[0] == nullptr) continue;  // leave function value as 0
+
+                    Array<Scalar, 2, 1> yxInput;
+                    yxInput << yxVal, yxVal;
+                    Array<Scalar, 2, 1> fyx0 = reconstructEigenfunction<Scalar>(
+                            direction == 0 ? tile.intersections[0]->thread.x : tile.intersections[0]->thread.y,
+                            direction == 0 ? c.bottomRows(problem->columns.x) : c.topRows(problem->columns.y), yxInput);
+                    funValues(j + 1) = fyx0(0);
+                }
+
+                /*
+                printf("Fun values: ");
+                for (int j = 0; j < funValues.size(); j++) printf("%.3f; ", funValues(j));
+                printf("\n");
+                 */
+
+                // interpolate points
+                Scalar xy0 = direction == 0 ? problem->grid.x(0) : problem->grid.y(0);
+                Scalar hxy = direction == 0 ? problem->grid.x(1) - xy0 : problem->grid.y(1) - xy0;
+                xy0 -= 2 * hxy;
+
+                for (int j = start; j < i+1; j++) {
+                    Scalar xyVal = direction == 0 ? xs(indices[j]) : ys(indices[j]);
+                    Index ixy = std::floor((xyVal - xy0) / hxy);
+                    Scalar xy1 = (xyVal - xy0) / hxy - ixy;
+
+                    assert(ixy >= 0 && ixy + 1 < funValues.size());
+                    assert(xy1 >= 0 && xy1 <= 1);
+
+                    result(indices[j]) += (funValues(ixy) * (1 - xy1) + funValues(ixy+1) * xy1) / 2;
+                }
+            }
         }
 
-        ArrayXs result = ArrayXs::Zero(xs.rows());
-
-        // Calculate function values per tile
-        for (size_t i = 0; i < points_per_tile.size(); i++) {
-            if (points_per_tile[i].empty()) continue;
-
-            size_t tileIndex_x = i % tileRows;
-            size_t tileIndex_y = i / tileRows;
-            Tile tile = problem->tiles(tileIndex_x, tileIndex_y);
-
-            // Sort points by x-coords
-
-
-            // Interpolation with 4 corners
-            ArrayXs corners = Array<Scalar, 4, 1>::Zero();
-            for (size_t j = 0; j < 4; j++) {
-                if (tile.intersections[j] != nullptr) corners(j) = functionValues.x[tile.intersections[j]->index];
-            }
-
-            Scalar xOffset = problem->grid.x[tileIndex_x-1];
-            Scalar yOffset = problem->grid.y[tileIndex_y-1];
-
-            for (size_t j = 0; j < points_per_tile[i].size(); j++) {
-                Index point_index = points_per_tile[i][j];
-                Scalar x1 = (xs(point_index) - xOffset) / hx;
-                Scalar y1 = (ys(point_index) - yOffset) / hy;
-
-                assert(x1 >= 0 && x1 <= 1 && y1 >= 0 && y1 <= 1);
-
-                result(point_index) =
-                        corners(0) * (1-x1)*(1-y1)
-                        + corners(1) * x1*(1-y1)
-                        + corners(2) * (1-x1)*y1
-                        + corners(3) * x1*y1;
-            }
-        }
+        return result;
     }
+
     // Long interpolation (4 * 3 points)
     else if (method == 2) {
         Index num_points = xs.size();
@@ -529,16 +545,19 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
             // iterate over each line
             for (int i = 0; i < num_points; i++) {
                 int start = i;
-                while (i+1 < num_points && yxs[indices[i]] == yxs[indices[i + 1]]) i++;
-                i++;
+                while (i+1 < num_points && yxs[indices[i]] == yxs[indices[i+1]]) i++;
 
                 // Calculate function values on the line
                 Scalar yxVal = yxs[indices[start]];
 
                 Index lineSize = direction == 0 ? problem->tiles.rows() : problem->tiles.cols();
-                VectorXs funValues = ArrayXs::Zero(lineSize + 8);  // some zero values of padding left and right
+                VectorXs funValues = ArrayXs::Zero(lineSize + 6);  // some zero values of padding left and right
 
-                Index iyx = highestLowerIndex(direction == 0 ? problem->grid.y : problem->grid.x, yxVal)+1;
+                Index iyx;
+                if (direction == 0)
+                    iyx = std::floor((yxVal - problem->grid.y(0)) / (problem->grid.y(1) - problem->grid.y(0))) + 1;
+                else
+                    iyx = std::floor((yxVal - problem->grid.x(0)) / (problem->grid.x(1) - problem->grid.x(0))) + 1;
 
                 for (int j = 0; j < lineSize; j++) {
                     const Tile &tile = direction == 0 ? problem->tiles(j, iyx) : problem->tiles(iyx, j);
@@ -549,43 +568,48 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
                     Array<Scalar, 2, 1> fyx0 = reconstructEigenfunction<Scalar>(
                             direction == 0 ? tile.intersections[0]->thread.x : tile.intersections[0]->thread.y,
                             direction == 0 ? c.bottomRows(problem->columns.x) : c.topRows(problem->columns.y), yxInput);
-                    funValues(j + 4) = fyx0(0);
+                    funValues(j + 3) = fyx0(0);
                 }
+
+                /*
+                printf("Fun values: ");
+                for (int j = 0; j < funValues.size(); j++) printf("%.3f; ", funValues(j));
+                printf("\n");
+                 */
 
                 // Interpolate values
                 Matrix<Scalar, 6, 6> interpolationMat;
                 interpolationMat <<
-                        0, 1728, -1440, -1440, 1440, -288,
-                        0, -17280, 23040, -1440, -5760, 1440,
-                        34560, -11520, -43200, 14400, 8640, -2880,
-                        0, 34560, 23040, -20160, -5760, 2880,
-                        0, -8640, -1440, 10080, 1440, -1440,
-                        0, 1152, 0, -1440, 0, 288;
+                           0,    0,  120,    0,    0,    0,
+                           6,  -60,  -40,  120,  -30,    4,
+                          -5,   80, -150,   80,   -5,    0,
+                          -5,   -5,   50,  -70,   35,   -5,
+                           5,  -20,   30,  -20,    5,    0,
+                          -1,    5,  -10,   10,   -5,    1;
 
-                interpolationMat /= 34560;
+                interpolationMat /= 2*120;
 
                 // interpolate points
                 Scalar xy0 = direction == 0 ? problem->grid.x(0) : problem->grid.y(0);
                 Scalar hxy = direction == 0 ? problem->grid.x(1) - xy0 : problem->grid.y(1) - xy0;
                 xy0 -= 4 * hxy;
 
-                for (int j = start; j < i; j++) {
-                    Scalar xVal = direction == 0 ? xs(indices[j]) : ys(indices[j]);
-                    Index ixy = std::floor((xVal - xy0) / hxy);
-                    Scalar x1 = (xVal - xy0) / hxy - ixy;
+                for (int j = start; j < i+1; j++) {
+                    Scalar xyVal = direction == 0 ? xs(indices[j]) : ys(indices[j]);
+                    Index ixy = std::floor((xyVal - xy0) / hxy);
+                    Scalar xy1 = (xyVal - xy0) / hxy - ixy;
 
                     assert(ixy - 2 >= 0 && ixy + 4 < funValues.size());
-                    assert(x1 >= 0 && x1 < 1);
+                    assert(xy1 >= 0 && xy1 <= 1);
 
                     VectorXs coeffs = interpolationMat * funValues.middleRows(ixy - 2, 6);
 
-                    result(indices[j]) += coeffs(0) + x1 * (coeffs(1) + x1 * (coeffs(2) + x1 * (
-                            coeffs(3) + x1 * (coeffs(4) + x1 * coeffs(5)))));
+                    result(indices[j]) += coeffs(0) + xy1 * (coeffs(1) + xy1 * (coeffs(2) + xy1 * (
+                            coeffs(3) + xy1 * (coeffs(4) + xy1 * coeffs(5)))));
                 }
             }
         }
 
-        result /= 2;
         return result;
     }
 
