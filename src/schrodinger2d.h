@@ -100,10 +100,12 @@ namespace schrodinger {
                 Intersection intersection = problem->intersections[i];
 
                 const Thread* tx = intersection.thread.x;
-                functionValues.x(i) = intersection.evaluation.x.matrix().dot(c.segment(tx->offset, tx->eigenpairs.size()));
+                functionValues.x(i) = intersection.evaluation.x.matrix().dot(
+                        c.segment(problem->columns.y + tx->offset, tx->eigenpairs.size()));
 
                 const Thread* ty = intersection.thread.y;
-                functionValues.y(i) = intersection.evaluation.y.matrix().dot(c.segment(ty->offset, ty->eigenpairs.size()));
+                functionValues.y(i) = intersection.evaluation.y.matrix().dot(
+                        c.segment(ty->offset, ty->eigenpairs.size()));
             }
         }
 
