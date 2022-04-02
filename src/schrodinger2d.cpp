@@ -518,6 +518,7 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
                 }
             }
             else {
+                /*
                 Matrix<Scalar, 16, 20> interpolationMat;
                 interpolationMat <<
                          -3.62629758,  1.16262976,  1.16262976, -0.25605536, -7.0934256,  -7.09342561,   4.70934256,   4.70934256,   1.2733564 ,  -0.29065744,  -0.29065744,  -0.43598616,  -0.43598616,  -0.92733564,  -0.92733564,   0.60899654,   2,  2, -1, -1,
@@ -609,6 +610,74 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
                                         + coeffs(17) * yp4
                                         + coeffs(18) * xp4 * y1
                                         + coeffs(19) * x1 * yp4;
+                }
+                 */
+
+                // get function values for 4 sides
+                Vector<Scalar, 16> funValues = Vector<Scalar, 16>::Zero();
+
+                Array<Scalar, 4, 1> input = Array<Scalar, 4, 1>::Zero();
+
+                for (int side = 0; side < 4; side++) {
+                    Intersection *intersection = tile.intersections[side == 0 ? 0 : (side % 3) + 1]; // 0,2,3,1
+                    if (intersection == nullptr) continue;  // function values near the border will be set to 0
+                    const Thread *thread = side % 2 == 0 ? intersection->thread.x : intersection->thread.y;
+                    if (side == 0)
+                        input << yOffset, yOffset + 0.25 * hy, yOffset + 0.5 * hy, yOffset + 0.75 * hy;
+                    else if (side == 1)
+                        input << xOffset, xOffset + 0.25 * hx, xOffset + 0.5 * hx, xOffset + 0.75 * hx;
+                    else if (side == 2)
+                        input << yOffset + hy, yOffset + 0.75 * hy, yOffset + 0.5 * hy, yOffset + 0.25 * hy;
+                    else if (side == 3)
+                        input << xOffset + hx, xOffset + 0.75 * hx, xOffset + 0.5 * hx, xOffset + 0.25 * hx;
+
+                    funValues.segment(side * 4, 4) = reconstructEigenfunction<Scalar>(
+                            thread, side % 2 == 0 ? c.bottomRows(problem->columns.x) : c.topRows(problem->columns.y),
+                            input);
+                }
+
+                for (Index point_index: points_per_tile[i]) {
+                    // Coordinates in the square are in [-2, 2] x [-2, 2]
+                    Scalar x = 4 * (xs(point_index) - xOffset) / hx - 2;
+                    Scalar y = 4 * (ys(point_index) - yOffset) / hy - 2;
+
+                    Scalar x0 = x + 2, x1 = x + 1, x2 = x, x3 = x - 1, x4 = x - 2;
+                    Scalar y0 = y + 2, y1 = y + 1, y2 = y, y3 = y - 1, y4 = y - 2;
+
+                    // horizontal Lagrange polynomials
+                    Scalar lx0 = x1 * x2 * x3 * x4 / (-1 * -2 * -3 * -4);
+                    Scalar lx1 = x0 * x2 * x3 * x4 / (1 * -1 * -2 * -3);
+                    Scalar lx2 = x0 * x1 * x3 * x4 / (2 * 1 * -1 * -2);
+                    Scalar lx3 = x0 * x1 * x2 * x4 / (3 * 2 * 1 * -1);
+                    Scalar lx4 = x0 * x1 * x2 * x3 / (4 * 3 * 2 * 1);
+
+                    // vertical Lagrange polynomials
+                    Scalar ly0 = y1 * y2 * y3 * y4 / (-1 * -2 * -3 * -4);
+                    Scalar ly1 = y0 * y2 * y3 * y4 / (1 * -1 * -2 * -3);
+                    Scalar ly2 = y0 * y1 * y3 * y4 / (2 * 1 * -1 * -2);
+                    Scalar ly3 = y0 * y1 * y2 * y4 / (3 * 2 * 1 * -1);
+                    Scalar ly4 = y0 * y1 * y2 * y3 / (4 * 3 * 2 * 1);
+
+                    result(point_index) =
+                              funValues(0) * lx0 * ly0
+                            + funValues(1) * lx0 * ly1
+                            + funValues(2) * lx0 * ly2
+                            + funValues(3) * lx0 * ly3
+
+                            + funValues(4) * lx0 * ly4
+                            + funValues(5) * lx1 * ly4
+                            + funValues(6) * lx2 * ly4
+                            + funValues(7) * lx3 * ly4
+
+                            + funValues(8) * lx4 * ly4
+                            + funValues(9) * lx4 * ly3
+                            + funValues(10) * lx4 * ly2
+                            + funValues(11) * lx4 * ly1
+
+                            + funValues(12) * lx4 * ly0
+                            + funValues(13) * lx3 * ly0
+                            + funValues(14) * lx2 * ly0
+                            + funValues(15) * lx1 * ly0;
                 }
             }
         }
