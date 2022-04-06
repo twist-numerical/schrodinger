@@ -7,6 +7,7 @@
 #include <type_traits>
 #include <string>
 #include <cstdio>
+#include <chrono>
 
 template<bool withEigenvectors, typename MatrixType>
 class RectangularPencil {
@@ -148,7 +149,6 @@ public:
 */
             }
         }
-
 
         // New truncation method
         if (method == 4 || method == 5) {
