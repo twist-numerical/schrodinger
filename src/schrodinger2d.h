@@ -84,10 +84,10 @@ namespace schrodinger {
         Scalar E;
         VectorXs c;
 
+    public:
         // Function values evaluated in each intersection point
         PerDirection<VectorXs> functionValues;
 
-    public:
         Eigenfunction(const Schrodinger2D *problem, Scalar E, const VectorXs &c)
                 : problem(problem), E(E), c(c) {
 
@@ -101,11 +101,11 @@ namespace schrodinger {
 
                 const Thread* tx = intersection.thread.x;
                 functionValues.x(i) = intersection.evaluation.x.matrix().dot(
-                        c.segment(problem->columns.y + tx->offset, tx->eigenpairs.size()));
+                        c.segment(tx->offset, tx->eigenpairs.size()));
 
                 const Thread* ty = intersection.thread.y;
                 functionValues.y(i) = intersection.evaluation.y.matrix().dot(
-                        c.segment(ty->offset, ty->eigenpairs.size()));
+                        c.segment(problem->columns.x + ty->offset, ty->eigenpairs.size()));
             }
         }
 

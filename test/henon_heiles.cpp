@@ -108,7 +108,7 @@ TEST_CASE("test_pencil", "") {
 }
 
 TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation][slow]") {
-    int n = 25;
+    int n = 30;
     int N = 25;
 
     Schrodinger2D<double> s([](double x, double y) { return x*x + y*y + sqrt(5)/10 * (x*y*y - x*x*x / 3); },
@@ -118,69 +118,29 @@ TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation][slow]") {
                                     .maxBasisSize=N
                             });
 
-    Schrodinger2D<double> c([](double x, double y) { return x*x + y*y + sqrt(5)/10 * (x*y*y - x*x*x / 3); },
-                            Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
-                            Options{
-                                    .gridSize={.x=3*n+2, .y=3*n+2},
-                                    .maxBasisSize=N
-                            });
-
     // Single eigenvalues
     auto eigenfunctions = s.eigenfunctions();
-    auto eigenfunctions2 = c.eigenfunctions();
     // Sort eigenvalues
     std::function<bool(std::pair<double, Schrodinger2D<double>::Eigenfunction>, std::pair<double, Schrodinger2D<double>::Eigenfunction>)> comp =
             [](auto a, auto b) {return a.first < b.first;};
 
     std::sort(eigenfunctions.begin(), eigenfunctions.end(), comp);
-    std::sort(eigenfunctions2.begin(), eigenfunctions2.end(), comp);
-
-    // Get function value on grid point
-    double x = s.grid.x[5];
-    double y = s.grid.y[17];
-
-    printf("Grid point: %f, %f\n", x, y);
-
-    std::vector<int> k_values = {0, 3, 8, 9};
 
     printf("Eigenvalues:\n");
-    for (int i = 0; i < (int)eigenfunctions.size() && i < (int)eigenfunctions2.size(); i++) {
-        printf("%d: %f; %f\n", i, eigenfunctions[i].first, eigenfunctions2[i].first);
+    for (int i = 0; i < (int)eigenfunctions.size(); i++) {
+        printf("%d: %f\n", i, eigenfunctions[i].first);
     }
 
-    for (int k : k_values) {
-        auto& p = eigenfunctions[k];
-        auto& p2 = eigenfunctions2[k];
+    for (int k = 0; k < (int)eigenfunctions.size(); k++) {
+        Schrodinger2D<double>::Eigenfunction ef = eigenfunctions[k].second;
+        assert(ef.functionValues.x.size() == ef.functionValues.y.size());
 
-        printf("Eigenvalue: %f, %f\n", p.first, p2.first);
+        VectorXd vx = ef.functionValues.x;
+        VectorXd vy = ef.functionValues.y;
+        vx /= vy.norm();
+        vy /= vy.norm();
 
-        // Just print out all the values
-        for (int i = 0; i < s.grid.x.size(); i++) {
-            double xp = s.grid.x(i);
-            printf("[");
-            for (int j = 0; j < s.grid.y.size(); j++) {
-                double yp = s.grid.y(j);
-                printf("%f", p.second(xp, yp));
-                if (j != s.grid.y.size()-1) printf(",");
-            }
-            printf("],\n");
-        }
-        printf("\n");
-
-        for (int i = 0; i < c.grid.x.size(); i+=4) {
-            double xp = c.grid.x(i);
-            printf("[");
-            for (int j = 0; j < c.grid.y.size(); j+=4) {
-                double yp = c.grid.y(j);
-                printf("%f", p2.second(xp, yp));
-                if (j < c.grid.y.size()-5) printf(",");
-            }
-            printf("],\n");
-        }
-        printf("\n");
-
-        return;
-
+        printf("ef %d, 2-norm diff %e, max abs diff %e\n", k, (vx - vy).norm(), (vx - vy).cwiseAbs().maxCoeff());
     }
 
 }

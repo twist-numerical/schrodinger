@@ -235,6 +235,14 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
 
     printf("Kernel: %dx%d -> %dx%d\n", (int)rows, (int)(colsX + colsY), (int)kernel.rows(), (int)kernel.cols());
 
+//    for (int k = 0; k < kernel.cols(); k++) {
+//        VectorXs v = crossingsMatch * kernel.col(k);
+//        printf("%d norm %e, abs %e\n", k, v.norm(), v.cwiseAbs().maxCoeff());
+//        printf("left %e, right %e\n",
+//               (crossingsMatch.leftCols(colsX) * kernel.col(k).topRows(colsX)).norm(),
+//               (crossingsMatch.rightCols(colsY) * kernel.col(k).bottomRows(colsY)).norm());
+//    }
+
     MatrixXs A(rows, colsX + colsY); // rows x (colsX + colsY)
     A << beta_x * lambda_x.asDiagonal(), beta_y * lambda_y.asDiagonal();
 
@@ -455,7 +463,7 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
                 else {
                     fv = reconstructEigenfunction<Scalar>(
                             tile.intersections[0]->thread.x,
-                            c.bottomRows(problem->columns.x), input);
+                            c.topRows(problem->columns.x), input);
                     funValues(4) = fv(0);
                 }
                 if (tile.intersections[1] == nullptr || tile.intersections[3] == nullptr) {
@@ -464,7 +472,7 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
                 else {
                     fv = reconstructEigenfunction<Scalar>(
                             tile.intersections[3]->thread.x,
-                            c.bottomRows(problem->columns.x), input);
+                            c.topRows(problem->columns.x), input);
                     funValues(5) = fv(0);
                 }
 
@@ -475,7 +483,7 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
                 else {
                     fv = reconstructEigenfunction<Scalar>(
                             tile.intersections[0]->thread.y,
-                            c.topRows(problem->columns.y), input);
+                            c.bottomRows(problem->columns.y), input);
                     funValues(6) = fv(0);
                 }
                 if (tile.intersections[2] == nullptr || tile.intersections[3] == nullptr) {
@@ -484,7 +492,7 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
                 else {
                     fv = reconstructEigenfunction<Scalar>(
                             tile.intersections[3]->thread.y,
-                            c.topRows(problem->columns.y), input);
+                            c.bottomRows(problem->columns.y), input);
                     funValues(7) = fv(0);
                 }
 
@@ -566,7 +574,7 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
                         input << xOffset + hx, xOffset + 0.75*hx, xOffset + 0.5*hx, xOffset + 0.25*hx;
 
                     funValues.segment(side*4, 4) = reconstructEigenfunction<Scalar>(
-                            thread, side % 2 == 0 ? c.bottomRows(problem->columns.x) : c.topRows(problem->columns.y), input);
+                            thread, side % 2 == 0 ? c.topRows(problem->columns.x) : c.bottomRows(problem->columns.y), input);
                 }
 
                 Vector<Scalar, 16> coeffs = interpolationMat * funValues;
@@ -698,8 +706,8 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
 
         return result;
     }
-    // Linear interpolation (4 points)
-    else if (method == 4) {
+    // Linear interpolation (4 points), horizontal linear, vertical linear
+    else if (method == 4 || method == 10 || method == 11) {
         Index num_points = xs.size();
 
         assert(xs.size() == ys.size());
@@ -707,6 +715,8 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
         ArrayXs result = ArrayXs::Zero(num_points);
 
         for (int direction = 0; direction < 2; direction++) {
+            if ((direction == 1 && method == 10) || (direction == 0 && method == 11)) continue;
+
             // Gather all points on the same horizontal/vertical line
             std::vector<Index> indices(num_points);
             for (Index i = 0; i < num_points; i++) indices[i] = i;
@@ -741,7 +751,7 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
                     yxInput << yxVal, yxVal;
                     Array<Scalar, 2, 1> fyx0 = reconstructEigenfunction<Scalar>(
                             direction == 0 ? tile.intersections[0]->thread.x : tile.intersections[0]->thread.y,
-                            direction == 0 ? c.bottomRows(problem->columns.x) : c.topRows(problem->columns.y), yxInput);
+                            direction == 0 ? c.topRows(problem->columns.x) : c.bottomRows(problem->columns.y), yxInput);
                     funValues(j + 1) = fyx0(0);
                 }
 
@@ -764,7 +774,10 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
                     assert(ixy >= 0 && ixy + 1 < funValues.size());
                     assert(xy1 >= 0 && xy1 <= 1);
 
-                    result(indices[j]) += (funValues(ixy) * (1 - xy1) + funValues(ixy + 1) * xy1) / 2;
+                    if (method == 4)
+                        result(indices[j]) += (funValues(ixy) * (1 - xy1) + funValues(ixy + 1) * xy1) / 2;
+                    else
+                        result(indices[j]) += funValues(ixy) * (1 - xy1) + funValues(ixy + 1) * xy1;
                 }
             }
         }
@@ -815,7 +828,7 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
                     yxInput << yxVal, yxVal;
                     Array<Scalar, 2, 1> fyx0 = reconstructEigenfunction<Scalar>(
                             direction == 0 ? tile.intersections[0]->thread.x : tile.intersections[0]->thread.y,
-                            direction == 0 ? c.bottomRows(problem->columns.x) : c.topRows(problem->columns.y), yxInput);
+                            direction == 0 ? c.topRows(problem->columns.x) : c.bottomRows(problem->columns.y), yxInput);
                     funValues(j + 3) = fyx0(0);
                 }
 
@@ -969,20 +982,20 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::op
             Array<Scalar, 3, 1> output;
             input << ypoints.segment(1, 3);
             output = reconstructEigenfunction<Scalar>(
-                    tile.intersections[0]->thread.x, c.bottomRows(problem->columns.x), input);
+                    tile.intersections[0]->thread.x, c.topRows(problem->columns.x), input);
             gridValues.row(0).template segment<3>(1) = output;
 
             output = reconstructEigenfunction<Scalar>(
-                    tile.intersections[1]->thread.x, c.bottomRows(problem->columns.x), input);
+                    tile.intersections[1]->thread.x, c.topRows(problem->columns.x), input);
             gridValues.row(4).template segment<3>(1) = output;
 
             input << xpoints.segment(1, 3);
             output = reconstructEigenfunction<Scalar>(
-                    tile.intersections[0]->thread.y, c.topRows(problem->columns.y), input);
+                    tile.intersections[0]->thread.y, c.bottomRows(problem->columns.y), input);
             gridValues.col(0).template segment<3>(1) = output;
 
             output = reconstructEigenfunction<Scalar>(
-                    tile.intersections[2]->thread.y, c.topRows(problem->columns.y), input);
+                    tile.intersections[2]->thread.y, c.bottomRows(problem->columns.y), input);
             gridValues.col(4).template segment<3>(1) = output;
 
             // finite diff formula coefficients
