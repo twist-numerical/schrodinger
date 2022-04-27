@@ -329,7 +329,7 @@ reconstructEigenfunction(const typename Schrodinger2D<Scalar>::Thread *t, const 
 }
 
 template<typename Scalar>
-Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) const {
+Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y, int interpolationMethod) const {
 
     ArrayXs xs = ArrayXs::Zero(1);
     xs(0) = x;
@@ -386,8 +386,9 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) cons
 
 
 template<typename Scalar>
-Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::operator()(ArrayXs xs, ArrayXs ys) const {
-    int method = problem->options.interpolationMethod;
+Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::operator()(ArrayXs xs, ArrayXs ys, int interpolationMethod) const {
+    int method = interpolationMethod;
+    if (method < 0) method = problem->options.interpolationMethod;
     if (method < 0) method = 0; // default
 
     assert(xs.size() == ys.size());

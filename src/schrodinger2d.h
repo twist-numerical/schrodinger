@@ -109,9 +109,9 @@ namespace schrodinger {
             }
         }
 
-        Scalar operator()(Scalar x, Scalar y) const;
+        Scalar operator()(Scalar x, Scalar y, int interpolationMethod=-1) const;
 
-        ArrayXs operator()(ArrayXs x, ArrayXs y) const;
+        ArrayXs operator()(ArrayXs x, ArrayXs y, int interpolationMethod=-1) const;
     };
 }
 
