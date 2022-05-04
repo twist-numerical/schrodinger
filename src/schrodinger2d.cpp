@@ -336,7 +336,7 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y, int 
     ArrayXs ys = ArrayXs::Zero(1);
     ys(0) = y;
 
-    return this->operator()(xs, ys)(0);
+    return this->operator()(xs, ys, interpolationMethod)(0);
 
 /*
     typedef Array<Scalar, 2, 1> Array2s;
