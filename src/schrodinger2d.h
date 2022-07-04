@@ -20,8 +20,7 @@ namespace schrodinger {
     struct Options {
         PerDirection<int> gridSize = {.x=11, .y=11};
         int maxBasisSize = 22;
-        int pencilMethod = -1;
-        int interpolationMethod = -1;
+        double pencilThreshold = 1e-8;
     };
 
     template<typename Scalar>
@@ -99,19 +98,19 @@ namespace schrodinger {
             for (size_t i = 0; i < numIntersections; i++) {
                 Intersection intersection = problem->intersections[i];
 
-                const Thread* tx = intersection.thread.x;
+                const Thread *tx = intersection.thread.x;
                 functionValues.x(i) = intersection.evaluation.x.matrix().dot(
                         c.segment(tx->offset, tx->eigenpairs.size()));
 
-                const Thread* ty = intersection.thread.y;
+                const Thread *ty = intersection.thread.y;
                 functionValues.y(i) = intersection.evaluation.y.matrix().dot(
                         c.segment(problem->columns.x + ty->offset, ty->eigenpairs.size()));
             }
         }
 
-        Scalar operator()(Scalar x, Scalar y, int interpolationMethod=-1) const;
+        Scalar operator()(Scalar x, Scalar y) const;
 
-        ArrayXs operator()(ArrayXs x, ArrayXs y, int interpolationMethod=-1) const;
+        ArrayXs operator()(ArrayXs x, ArrayXs y) const;
     };
 }
 

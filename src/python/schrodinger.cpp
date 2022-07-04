@@ -57,15 +57,13 @@ PYBIND11_MODULE(schrodinger, m) {
     py::class_<Schrodinger2D<double>, std::shared_ptr<Schrodinger2D<double>>>(m, "Schrodinger2D")
             .def(py::init(
                     [](const std::function<double(double, double)> &V, const Domain<double, 2> &domain,
-                       const std::array<int, 2> &gridSize, int maxBasisSize, int pencilMethod, int interpolationMethod) {
+                       const std::array<int, 2> &gridSize, int maxBasisSize) {
                         return std::make_shared<Schrodinger2D<double>>(V, domain, (Options) {
                                 .gridSize = {.x = gridSize[0], .y=gridSize[1]},
                                 .maxBasisSize=maxBasisSize,
-                                .pencilMethod=pencilMethod,
-                                .interpolationMethod=interpolationMethod
                         });
                     }), py::arg("V"), py::arg("domain"), py::arg("gridSize") = std::array<int, 2>{21, 21},
-                 py::arg("maxBasisSize") = 16, py::arg("pencilMethod") = -1, py::arg("interpolationMethod") = -1)
+                 py::arg("maxBasisSize") = 16)
             .def("eigenvalues", &Schrodinger2D<double>::eigenvalues)
             .def("eigenfunctions", [](std::shared_ptr<const Schrodinger2D<double>> s) {
                 std::vector<std::pair<double, Schrodinger2D<double>::Eigenfunction>> eigs = s->eigenfunctions();

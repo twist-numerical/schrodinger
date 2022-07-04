@@ -56,7 +56,7 @@ computeThread(const std::function<Scalar(Scalar)> &V, Scalar min, Scalar max, si
     size_t pairs = std::min(maxPairs, (size_t) length);
 
     thread.eigenpairs.reserve(pairs);
-    for (auto &iEf : thread.matslise->eigenpairsByIndex(0, pairs, Y<Scalar>::Dirichlet())) {
+    for (auto &iEf: thread.matslise->eigenpairsByIndex(0, pairs, Y<Scalar>::Dirichlet())) {
         thread.eigenpairs.emplace_back(get<1>(iEf), std::move(get<2>(iEf)));
     }
     offset += pairs;
@@ -85,8 +85,8 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
         columns.x = 0;
         Index i = 0;
 // #pragma omp parallel for ordered schedule(dynamic, 1) collapse(2)
-        for (Scalar &x : IterateEigen(grid.x)) {
-            for (auto &dom : domain->intersections({{x, 0}, Matrix<Scalar, 2, 1>::Unit(1)})) {
+        for (Scalar &x: IterateEigen(grid.x)) {
+            for (auto &dom: domain->intersections({{x, 0}, Matrix<Scalar, 2, 1>::Unit(1)})) {
                 Thread thread = computeThread<Scalar>(
                         [this, x](Scalar y) -> Scalar { return V(x, y) / 2; },
                         dom.first, dom.second, (size_t) options.maxBasisSize, grid.y, columns.x);
@@ -101,16 +101,16 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
     }
 
     size_t intersectionCount = 0;
-    for (const Thread &t : threads.x)
+    for (const Thread &t: threads.x)
         intersectionCount += t.gridLength;
 
     intersections.reserve(intersectionCount);
 
-    for (const Thread &t : threads.x) {
+    for (const Thread &t: threads.x) {
         MatrixXs onGrid(t.gridLength, t.eigenpairs.size());
         ArrayXs subGrid = grid.y.segment(t.gridOffset, t.gridLength);
         Index j = 0;
-        for (auto &Ef : t.eigenpairs)
+        for (auto &Ef: t.eigenpairs)
             onGrid.col(j++) = (*get<1>(Ef))(subGrid).col(0);
         for (Index i = 0; i < t.gridLength; ++i) {
             intersections.emplace_back(Intersection{
@@ -126,8 +126,8 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
         columns.y = 0;
         Index i = 0;
 // #pragma omp parallel for schedule(dynamic, 1) collapse(2)
-        for (Scalar &y : IterateEigen(grid.y)) {
-            for (auto &dom : domain->intersections({{0, y}, Matrix<Scalar, 2, 1>::Unit(0)})) {
+        for (Scalar &y: IterateEigen(grid.y)) {
+            for (auto &dom: domain->intersections({{0, y}, Matrix<Scalar, 2, 1>::Unit(0)})) {
                 Thread thread = computeThread<Scalar>(
                         [this, y](Scalar x) -> Scalar { return V(x, y) / 2; },
                         dom.first, dom.second, (size_t) options.maxBasisSize, grid.x, columns.y);
@@ -143,7 +143,7 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
     {
         std::vector<Intersection *> intersectionsByY;
         intersectionsByY.reserve(intersections.size());
-        for (Intersection &i : intersections)
+        for (Intersection &i: intersections)
             intersectionsByY.push_back(&i);
         std::sort(intersectionsByY.begin(), intersectionsByY.end(),
                   [](const Intersection *a, const Intersection *b) {
@@ -152,11 +152,11 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
                       return a->position.y < b->position.y;
                   });
         auto intersection = intersectionsByY.begin();
-        for (Thread &t : threads.y) {
+        for (Thread &t: threads.y) {
             MatrixXs onGrid(t.gridLength, t.eigenpairs.size());
             ArrayXs subGrid = grid.x.segment(t.gridOffset, t.gridLength);
             Index j = 0;
-            for (auto &Ef : t.eigenpairs)
+            for (auto &Ef: t.eigenpairs)
                 onGrid.col(j++) = (*get<1>(Ef))(subGrid).col(0);
             for (Index i = 0; i < t.gridLength; ++i) {
                 assert((**intersection).position.x == grid.x[t.gridOffset + i] &&
@@ -170,7 +170,7 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
 
     {
         tiles.resize(options.gridSize.x + 1, options.gridSize.y + 1);
-        for (auto &intersection : intersections) {
+        for (auto &intersection: intersections) {
             Index i = intersection.thread.x->valueIndex;
             Index j = intersection.thread.y->valueIndex;
             tiles(i + 1, j + 1).intersections[0] = &intersection;
@@ -197,7 +197,7 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
     MatrixXs beta_y = MatrixXs::Zero(rows, colsY);
 
     size_t row = 0;
-    for (const typename Schrodinger2D<Scalar>::Intersection &intersection : self->intersections) {
+    for (const typename Schrodinger2D<Scalar>::Intersection &intersection: self->intersections) {
         beta_x.row(row).segment(
                 intersection.thread.x->offset, intersection.thread.x->eigenpairs.size()
         ) = intersection.evaluation.x;
@@ -212,36 +212,20 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
     VectorXs lambda_x(colsX);
     VectorXs lambda_y(colsY);
 
-    for (const auto &x : self->threads.x) {
+    for (const auto &x: self->threads.x) {
         Index offset = x.offset;
-        for (auto &ef : x.eigenpairs)
+        for (auto &ef: x.eigenpairs)
             lambda_x(offset++) = get<0>(ef);
     }
-    for (const auto &y : self->threads.y) {
+    for (const auto &y: self->threads.y) {
         Index offset = y.offset;
-        for (auto &ef : y.eigenpairs)
+        for (auto &ef: y.eigenpairs)
             lambda_y(offset++) = get<0>(ef);
     }
 
     MatrixXs crossingsMatch(rows, colsX + colsY);
     crossingsMatch << beta_x, -beta_y;
     MatrixXs kernel = schrodinger::internal::rightKernel<MatrixXs>(crossingsMatch, 1e-6);
-
-    // Eigen::BDCSVD kernelSvd(crossingsMatch, Eigen::ComputeFullV);
-    // MatrixXs kernel = kernelSvd.matrixV().rightCols(crossingsMatch.cols() - kernelSvd.rank());
-
-    // FullPivLU<MatrixXs> lu(crossingsMatch);
-    // MatrixXs kernel = lu.kernel();
-
-    printf("Kernel: %dx%d -> %dx%d\n", (int)rows, (int)(colsX + colsY), (int)kernel.rows(), (int)kernel.cols());
-
-//    for (int k = 0; k < kernel.cols(); k++) {
-//        VectorXs v = crossingsMatch * kernel.col(k);
-//        printf("%d norm %e, abs %e\n", k, v.norm(), v.cwiseAbs().maxCoeff());
-//        printf("left %e, right %e\n",
-//               (crossingsMatch.leftCols(colsX) * kernel.col(k).topRows(colsX)).norm(),
-//               (crossingsMatch.rightCols(colsY) * kernel.col(k).bottomRows(colsY)).norm());
-//    }
 
     MatrixXs A(rows, colsX + colsY); // rows x (colsX + colsY)
     A << beta_x * lambda_x.asDiagonal(), beta_y * lambda_y.asDiagonal();
@@ -250,7 +234,7 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
                   ? beta_y * kernel.bottomRows(colsY)
                   : beta_x * kernel.topRows(colsX);
 
-    RectangularPencil<withEigenfunctions, MatrixXs> pencil(A * kernel, BK, self->options.pencilMethod);
+    RectangularPencil<withEigenfunctions, MatrixXs> pencil(A * kernel, BK, self->options.pencilThreshold);
 
 
     if constexpr(withEigenfunctions) {
@@ -264,22 +248,6 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
             // Normalize eigenfunction
 
             VectorXs coeffs = kernel * vectors.col(i).real();
-            /*
-            Scalar sum = 0;
-            for (auto& intersection : self->intersections) {
-                // Calculate function value in intersection
-                Scalar functionVal = 0;
-                ArrayXs vals = intersection.evaluation.x;
-                for (int j = 0; j < vals.size(); j++) {
-                    functionVal += vals(j) * coeffs(intersection.thread.x->offset + j);
-                }
-                sum += functionVal*functionVal;
-            }
-
-
-            Scalar factor = sqrt(self->intersections.size()) / sqrt(sum);
-            // printf("Total sum: %f, num intersections: %d\n", (double)sum, (int)self->intersections.size());
-             */
 
             eigenfunctions.emplace_back(
                     values[i].real(),
@@ -329,777 +297,149 @@ reconstructEigenfunction(const typename Schrodinger2D<Scalar>::Thread *t, const 
 }
 
 template<typename Scalar>
-Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y, int interpolationMethod) const {
+Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) const {
 
     ArrayXs xs = ArrayXs::Zero(1);
     xs(0) = x;
     ArrayXs ys = ArrayXs::Zero(1);
     ys(0) = y;
 
-    return this->operator()(xs, ys, interpolationMethod)(0);
-
-/*
-    typedef Array<Scalar, 2, 1> Array2s;
-    Array2s xs, ys;
-    xs << xOffset + x1, xOffset + hx - x1;
-    ys << yOffset + y1, yOffset + hy - y1;
-    Array2s fy0 = reconstructEigenfunction<Scalar>(tile.intersections[0]->thread.y, c.bottomRows(problem->columns.y),
-                                                   xs);
-    Array2s fx0 = reconstructEigenfunction<Scalar>(tile.intersections[0]->thread.x, c.topRows(problem->columns.x), ys);
-    Array2s fy3 = reconstructEigenfunction<Scalar>(tile.intersections[3]->thread.y, c.bottomRows(problem->columns.y),
-                                                   xs);
-    Array2s fx3 = reconstructEigenfunction<Scalar>(tile.intersections[3]->thread.x, c.topRows(problem->columns.x), ys);
-
-    if (x == xOffset) {
-        return fx0(0);
-    }
-    if (y == yOffset) {
-        return fy0(0);
-    }
-
-
-    Matrix<Scalar, 2, 1> wx, wy;
-    Scalar nx = 2 / (hx * x1 - x1 * x1);
-    wx << (2 * hx - 3 * x1) * nx / hx, -2 * nx, nx, -(hx - 3 * x1) * nx / hx;
-    Scalar ny = 2 / (hy * y1 - y1 * y1);
-    wy << (2 * hy - 3 * y1) * ny / hy, -2 * ny, ny, -(hy - 3 * y1) * ny / hy;
-
-    {
-        Matrix<Scalar, 4, 4> w = Matrix<Scalar, 4, 4>::Zero();
-        Matrix<Scalar, 4, 1> b;
-        for (int i = 1; i <= 2; ++i)
-            for (int j = 1; j <= 2; ++j) {
-                b(2 * i + j - 3) =
-                        wx(3 * i - 3) * fx0(j - 1) + wx(6 - 3 * i) * fx3(j - 1) + wy(3 * j - 3) * fy0(i - 1) +
-                        wy(6 - 3 * j) * fy3(i - 1);
-
-                w(2 * i + j - 3, 2 * i + j - 3) = problem->V(xs(i - 1), ys(j - 1)) - E - wx(1) - wy(1);
-                w(2 * i + j - 3, 3 - 2 * i + j) = -wx(2);
-                w(2 * i + j - 3, 2 * i - j) = -wy(2);
-            }
-
-        return (w.inverse() * b)(0);
-    }
-
-     */
+    return this->operator()(xs, ys)(0);
 }
 
 
 template<typename Scalar>
-Eigen::Array<Scalar, Eigen::Dynamic, 1> Schrodinger2D<Scalar>::Eigenfunction::operator()(ArrayXs xs, ArrayXs ys, int interpolationMethod) const {
-    int method = interpolationMethod;
-    if (method < 0) method = problem->options.interpolationMethod;
-    if (method < 0) method = 0; // default
-
+Eigen::Array<Scalar, Eigen::Dynamic, 1>
+Schrodinger2D<Scalar>::Eigenfunction::operator()(ArrayXs xs, ArrayXs ys) const {
     assert(xs.size() == ys.size());
 
-    // 4 corners interpolation / 8 points square interpolation / 16 points square interpolation
-    if (method == 0 || method == 1 || method == 2) {
-        // Sort the query points per tile
-        size_t tileRows = problem->tiles.rows();
-        size_t tileCols = problem->tiles.cols();
-
-        Scalar grid_x0 = problem->grid.x(0);
-        Scalar hx = problem->grid.x(1) - grid_x0;
-        grid_x0 -= hx;
-        Scalar grid_y0 = problem->grid.y(0);
-        Scalar hy = problem->grid.y(1) - grid_y0;
-        grid_y0 -= hy;
-
-        std::vector<std::vector<Index>> points_per_tile(tileRows * tileCols, std::vector<Index>());
-
-        for (Index i = 0; i < xs.rows(); i++) {
-            size_t tileIndex_x = std::floor((xs(i) - grid_x0) / hx);
-            size_t tileIndex_y = std::floor((ys(i) - grid_y0) / hy);
-            points_per_tile[tileIndex_x + tileIndex_y * tileRows].emplace_back(i);
-        }
-
-        ArrayXs result = ArrayXs::Zero(xs.rows());
-
-        // Calculate function values per tile
-        for (size_t i = 0; i < points_per_tile.size(); i++) {
-            if (points_per_tile[i].empty()) continue;
-
-            size_t tileIndex_x = i % tileRows;
-            size_t tileIndex_y = i / tileRows;
-            Tile tile = problem->tiles(tileIndex_x, tileIndex_y);
-
-            // Interpolation with 4 corners
-            ArrayXs corners = Array<Scalar, 4, 1>::Zero();
-            for (size_t j = 0; j < 4; j++) {
-                if (tile.intersections[j] != nullptr) corners(j) = functionValues.x[tile.intersections[j]->index];
-            }
-
-            Scalar xOffset = grid_x0 + tileIndex_x * hx;
-            Scalar yOffset = grid_y0 + tileIndex_y * hy;
-
-            if (method == 0) {
-                for (size_t j = 0; j < points_per_tile[i].size(); j++) {
-                    Index point_index = points_per_tile[i][j];
-                    Scalar x1 = (xs(point_index) - xOffset) / hx;
-                    Scalar y1 = (ys(point_index) - yOffset) / hy;
-
-                    assert(x1 >= 0 && x1 <= 1 && y1 >= 0 && y1 <= 1);
-
-                    result(point_index) =
-                            corners(0) * (1 - x1) * (1 - y1)
-                            + corners(1) * x1 * (1 - y1)
-                            + corners(2) * (1 - x1) * y1
-                            + corners(3) * x1 * y1;
-                }
-            }
-            // 8 points square interpolation
-            else if (method == 1) {
-                // get function values for 4 sides
-                Vector<Scalar, 8> funValues = Vector<Scalar, 8>::Zero();
-                funValues.topRows(4) = corners;
-
-                Array<Scalar, 2, 1> fv = Array<Scalar, 2, 1>::Zero();
-                Array<Scalar, 2, 1> input = Array<Scalar, 2, 1>::Zero();
-
-                input << yOffset + 0.5*hy, yOffset + 0.5*hy;
-                if (tile.intersections[0] == nullptr || tile.intersections[2] == nullptr) {
-                    funValues(4) = 0;
-                }
-                else {
-                    fv = reconstructEigenfunction<Scalar>(
-                            tile.intersections[0]->thread.x,
-                            c.topRows(problem->columns.x), input);
-                    funValues(4) = fv(0);
-                }
-                if (tile.intersections[1] == nullptr || tile.intersections[3] == nullptr) {
-                    funValues(5) = 0;
-                }
-                else {
-                    fv = reconstructEigenfunction<Scalar>(
-                            tile.intersections[3]->thread.x,
-                            c.topRows(problem->columns.x), input);
-                    funValues(5) = fv(0);
-                }
-
-                input << xOffset + 0.5*hx, xOffset + 0.5*hx;
-                if (tile.intersections[0] == nullptr || tile.intersections[1] == nullptr) {
-                    funValues(6) = 0;
-                }
-                else {
-                    fv = reconstructEigenfunction<Scalar>(
-                            tile.intersections[0]->thread.y,
-                            c.bottomRows(problem->columns.y), input);
-                    funValues(6) = fv(0);
-                }
-                if (tile.intersections[2] == nullptr || tile.intersections[3] == nullptr) {
-                    funValues(7) = 0;
-                }
-                else {
-                    fv = reconstructEigenfunction<Scalar>(
-                            tile.intersections[3]->thread.y,
-                            c.bottomRows(problem->columns.y), input);
-                    funValues(7) = fv(0);
-                }
-
-                Matrix<Scalar, 8, 8> interpolationMat;
-                interpolationMat <<
-                         1,  0,  0,  0, -0,  0,  0,  0,
-                        -3, -1,  0,  0, -0,  0,  4,  0,
-                        -3,  0, -1, -0,  4,  0,  0,  0,
-                         5, -1, -1, -3, -4,  4, -4,  4,
-                         2,  2,  0,  0,  0, -0, -4, -0,
-                         2,  0,  2,  0, -4,  0,  0, -0,
-                        -2,  2, -2,  2,  4, -4,  0,  0,
-                        -2, -2,  2,  2,  0,  0,  4, -4;
-
-                Vector<Scalar, 8> coeffs = interpolationMat * funValues;
-                /*
-                printf("FunValues: ");
-                for (int j = 0; j < 8; j++) printf("%.3e; ", funValues(j));
-                printf("\n");
-                 */
-
-                for (Index point_index : points_per_tile[i]) {
-                    Scalar x1 = (xs(point_index) - xOffset) / hx;
-                    Scalar y1 = (ys(point_index) - yOffset) / hy;
-
-                    assert(x1 >= 0 && x1 <= 1 && y1 >= 0 && y1 <= 1);
-
-                    result(point_index) = coeffs(0)
-                            + coeffs(1) * x1
-                            + coeffs(2) * y1
-                            + coeffs(3) * x1 * y1
-                            + coeffs(4) * x1 * x1
-                            + coeffs(5) * y1 * y1
-                            + coeffs(6) * x1 * y1 * y1
-                            + coeffs(7) * x1 * x1 * y1;
-
-                    // printf("Result: %.3e\n", result(point_index));
-                }
-            }
-            // 16 points square interpolation
-            else if (method == 2) {
-
-                Matrix<Scalar, 16, 16> interpolationMat;
-                interpolationMat <<
-                        -24,   0,  48,   0, -24,   0,  48,   0, -24,   0,  48,   0, -24,  -0,  48,  -0,
-                         16,   0, -24,   0,  16, -32,  -0,  32, -16,   0,  24,   0, -16,  32,  -0, -32,
-                         16, -32,  -0,  32, -16,   0,  24,   0, -16,  32,  -0, -32,  16,   0, -24,   0,
-                        -10,  16,   0, -16,  10, -16,  -0,  16, -10,  16,  -0, -16,  10, -16,   0,  16,
-                         -2,   0,   0,   0,  -2,  32, -60,  32,  -2,   0,   0,   0,  -2,  32, -60,  32,
-                         -2,  32, -60,  32,  -2,   0,   0,   0,  -2,  32, -60,  32,  -2,  -0,   0,  -0,
-                          1, -16,  30, -16,   1,   0,   0,   0,  -1,  16, -30,  16,  -1,   0,   0,  -0,
-                          1,   0,   0,   0,  -1,  16, -30,  16,  -1,   0,   0,   0,   1, -16,  30, -16,
-                         -4,   0,   0,   0,  -4,   8,  -0,  -8,   4,   0,   0,   0,   4,  -8,   0,   8,
-                         -4,   8,   0,  -8,   4,   0,   0,   0,   4,  -8,   0,   8,  -4,   0,   0,  -0,
-                          2,   0,   0,   0,  -2,   4,   0,  -4,   2,   0,   0,   0,  -2,   4,  -0,  -4,
-                          2,  -4,  -0,   4,  -2,   0,   0,   0,   2,  -4,   0,   4,  -2,   0,   0,  -0,
-                          2,   0,   0,   0,   2,  -8,  12,  -8,   2,   0,   0,  -0,   2,  -8,  12,  -8,
-                          2,  -8,  12,  -8,   2,   0,   0,   0,   2,  -8,  12,  -8,   2,   0,   0,   0,
-                         -1,   0,   0,   0,   1,  -4,   6,  -4,   1,   0,   0,   0,  -1,   4,  -6,   4,
-                         -1,   4,  -6,   4,  -1,   0,   0,   0,   1,  -4,   6,  -4,   1,   0,   0,   0;
-                interpolationMat /= 3 * 32;
-
-                // get function values for 4 sides
-                Vector<Scalar, 16> funValues = Vector<Scalar, 16>::Zero();
-
-                Array<Scalar, 4, 1> input = Array<Scalar, 4, 1>::Zero();
-
-                for (int side = 0; side < 4; side++) {
-                    Intersection* intersection = tile.intersections[side == 0 ? 0 : (side%3) + 1]; // 0,2,3,1
-                    if (intersection == nullptr) continue;  // function values near the border will be set to 0
-                    const Thread* thread = side % 2 == 0 ? intersection->thread.x : intersection->thread.y;
-                    if (side == 0)
-                        input << yOffset, yOffset + 0.25*hy, yOffset + 0.5*hy, yOffset + 0.75*hy;
-                    else if (side == 1)
-                        input << xOffset, xOffset + 0.25*hx, xOffset + 0.5*hx, xOffset + 0.75*hx;
-                    else if (side == 2)
-                        input << yOffset + hy, yOffset + 0.75*hy, yOffset + 0.5*hy, yOffset + 0.25*hy;
-                    else if (side == 3)
-                        input << xOffset + hx, xOffset + 0.75*hx, xOffset + 0.5*hx, xOffset + 0.25*hx;
-
-                    funValues.segment(side*4, 4) = reconstructEigenfunction<Scalar>(
-                            thread, side % 2 == 0 ? c.topRows(problem->columns.x) : c.bottomRows(problem->columns.y), input);
-                }
-
-                Vector<Scalar, 16> coeffs = interpolationMat * funValues;
-
-/*
-                printf("Fun values: ");
-                for (int j = 0; j < funValues.size(); j++) printf("%.3f; ", funValues(j));
-                printf("\n");
-
-                printf("Coefficients: ");
-                for (int j = 0; j < coeffs.size(); j++) printf("%.8f, ", coeffs(j));
-                printf("\n");
-*/
-
-
-                for (Index point_index: points_per_tile[i]) {
-                    // Coordinates in the square are in [-2, 2] x [-2, 2]
-                    Scalar x = 4 * (xs(point_index) - xOffset) / hx - 2;
-                    Scalar y = 4 * (ys(point_index) - yOffset) / hy - 2;
-
-                    assert(x >= -2 && x <= 2 && y >= -2 && y <= 2);
-
-                    Scalar xp2 = x*x;
-                    Scalar xp3 = x*x*x;
-                    Scalar xp4 = x*x*x*x;
-
-                    Scalar yp2 = y*y;
-                    Scalar yp3 = y*y*y;
-                    Scalar yp4 = y*y*y*y;
-
-                    result(point_index) = coeffs(0)
-                                          + coeffs(1) * x
-                                          + coeffs(2) * y
-                                          + coeffs(3) * x * y
-                                          + coeffs(4) * xp2
-                                          + coeffs(5) * yp2
-                                          + coeffs(6) * x * yp2
-                                          + coeffs(7) * xp2 * y
-
-                                          + coeffs(8) * xp3
-                                          + coeffs(9) * yp3
-                                          + coeffs(10) * xp3 * y
-                                          + coeffs(11) * x * yp3
-
-                                          + coeffs(12) * xp4
-                                          + coeffs(13) * yp4
-                                          + coeffs(14) * xp4 * y
-                                          + coeffs(15) * x * yp4;
-                }
-            }
-        }
-
-        return result;
-    }
-
-    // Large 4x4 grid
-    else if (method == 3) {
-
-        Scalar grid_x0 = problem->grid.x(0);
-        Scalar hx = problem->grid.x(1) - grid_x0;
-        grid_x0 -= hx;
-        Scalar grid_y0 = problem->grid.y(0);
-        Scalar hy = problem->grid.y(1) - grid_y0;
-        grid_y0 -= hy;
-
-        ArrayXs result = ArrayXs::Zero(xs.rows());
-
-        for (Index i = 0; i < xs.size(); i++) {
-            Index tileIndex_x = std::floor((xs(i) - grid_x0) / hx);
-            Index tileIndex_y = std::floor((ys(i) - grid_y0) / hy);
-
-            // Get a 4x4 grid of function values
-            Array<Scalar, 4, 4> funValuesGrid = Array<Scalar, 4, 4>::Zero();
-            for (Index xi = 0; xi < 4; xi++) {
-                for (Index yi = 0; yi < 4; yi++) {
-                    Index tile_x = tileIndex_x + xi - 1;
-                    Index tile_y = tileIndex_y + yi - 1;
-                    if (tile_x >= 0 && tile_x < problem->tiles.cols() && tile_y >= 0 && tile_y < problem->tiles.rows()) {
-                        Tile tile = problem->tiles(tile_x, tile_y);
-                        if (tile.intersections[0] != nullptr)
-                            funValuesGrid(xi, yi) = functionValues.x[tile.intersections[0]->index];
-                    }
-                }
-            }
-
-            // Coordinates in the square are in [0, 1] x [0, 1]
-            Scalar x = (xs(i) - grid_x0) / hx - tileIndex_x;
-            Scalar y = (ys(i) - grid_y0) / hy - tileIndex_y;
-
-            assert(x >= 0 && x <= 1 && y >= 0 && y <= 1);
-
-            Scalar x0 = x + 1, x1 = x + 0, x2 = x - 1, x3 = x - 2;
-            Scalar y0 = y + 1, y1 = y + 0, y2 = y - 1, y3 = y - 2;
-
-            // horizontal Lagrange polynomials
-            Scalar lx0 = x1 * x2 * x3 / (-1 * -2 * -3);
-            Scalar lx1 = x0 * x2 * x3 / ( 1 * -1 * -2);
-            Scalar lx2 = x0 * x1 * x3 / ( 2 *  1 * -1);
-            Scalar lx3 = x0 * x1 * x2 / ( 3 *  2 *  1);
-
-            // vertical Lagrange polynomials
-            Scalar ly0 = y1 * y2 * y3 / (-1 * -2 * -3);
-            Scalar ly1 = y0 * y2 * y3 / ( 1 * -1 * -2);
-            Scalar ly2 = y0 * y1 * y3 / ( 2 *  1 * -1);
-            Scalar ly3 = y0 * y1 * y2 / ( 3 *  2 *  1);
-
-            result(i) =
-                      funValuesGrid(0, 0) * lx0 * ly0
-                    + funValuesGrid(0, 1) * lx0 * ly1
-                    + funValuesGrid(0, 2) * lx0 * ly2
-                    + funValuesGrid(0, 3) * lx0 * ly3
-
-                    + funValuesGrid(1, 0) * lx1 * ly0
-                    + funValuesGrid(1, 1) * lx1 * ly1
-                    + funValuesGrid(1, 2) * lx1 * ly2
-                    + funValuesGrid(1, 3) * lx1 * ly3
-
-                    + funValuesGrid(2, 0) * lx2 * ly0
-                    + funValuesGrid(2, 1) * lx2 * ly1
-                    + funValuesGrid(2, 2) * lx2 * ly2
-                    + funValuesGrid(2, 3) * lx2 * ly3
-
-                    + funValuesGrid(3, 0) * lx3 * ly0
-                    + funValuesGrid(3, 1) * lx3 * ly1
-                    + funValuesGrid(3, 2) * lx3 * ly2
-                    + funValuesGrid(3, 3) * lx3 * ly3;
-
-        }
-
-        return result;
-    }
-    // Linear interpolation (4 points), horizontal linear, vertical linear
-    else if (method == 4 || method == 10 || method == 11) {
-        Index num_points = xs.size();
-
-        assert(xs.size() == ys.size());
-
-        ArrayXs result = ArrayXs::Zero(num_points);
-
-        for (int direction = 0; direction < 2; direction++) {
-            if ((direction == 1 && method == 10) || (direction == 0 && method == 11)) continue;
-
-            // Gather all points on the same horizontal/vertical line
-            std::vector<Index> indices(num_points);
-            for (Index i = 0; i < num_points; i++) indices[i] = i;
-
-            auto &yxs = direction == 0 ? ys : xs;
-
-            std::sort(indices.begin(), indices.end(),
-                      [&yxs](Index i1, Index i2) { return yxs(i1) < yxs(i2); });
-
-            // iterate over each line
-            for (int i = 0; i < num_points; i++) {
-                int start = i;
-                while (i + 1 < num_points && yxs[indices[i]] == yxs[indices[i + 1]]) i++;
-
-                // Calculate function values on the line
-                Scalar yxVal = yxs[indices[start]];
-
-                Index lineSize = direction == 0 ? problem->tiles.rows() : problem->tiles.cols();
-                VectorXs funValues = ArrayXs::Zero(lineSize + 2);  // some zero values of padding left and right
-
-                Index iyx;
-                if (direction == 0)
-                    iyx = std::floor((yxVal - problem->grid.y(0)) / (problem->grid.y(1) - problem->grid.y(0))) + 1;
-                else
-                    iyx = std::floor((yxVal - problem->grid.x(0)) / (problem->grid.x(1) - problem->grid.x(0))) + 1;
-
-                for (int j = 0; j < lineSize; j++) {
-                    const Tile &tile = direction == 0 ? problem->tiles(j, iyx) : problem->tiles(iyx, j);
-                    if (tile.intersections[0] == nullptr) continue;  // leave function value as 0
-
-                    Array<Scalar, 2, 1> yxInput;
-                    yxInput << yxVal, yxVal;
-                    Array<Scalar, 2, 1> fyx0 = reconstructEigenfunction<Scalar>(
-                            direction == 0 ? tile.intersections[0]->thread.x : tile.intersections[0]->thread.y,
-                            direction == 0 ? c.topRows(problem->columns.x) : c.bottomRows(problem->columns.y), yxInput);
-                    funValues(j + 1) = fyx0(0);
-                }
-
-                /*
-                printf("Fun values: ");
-                for (int j = 0; j < funValues.size(); j++) printf("%.3f; ", funValues(j));
-                printf("\n");
-                 */
-
-                // interpolate points
-                Scalar xy0 = direction == 0 ? problem->grid.x(0) : problem->grid.y(0);
-                Scalar hxy = direction == 0 ? problem->grid.x(1) - xy0 : problem->grid.y(1) - xy0;
-                xy0 -= 2 * hxy;
-
-                for (int j = start; j < i + 1; j++) {
-                    Scalar xyVal = direction == 0 ? xs(indices[j]) : ys(indices[j]);
-                    Index ixy = std::floor((xyVal - xy0) / hxy);
-                    Scalar xy1 = (xyVal - xy0) / hxy - ixy;
-
-                    assert(ixy >= 0 && ixy + 1 < funValues.size());
-                    assert(xy1 >= 0 && xy1 <= 1);
-
-                    if (method == 4)
-                        result(indices[j]) += (funValues(ixy) * (1 - xy1) + funValues(ixy + 1) * xy1) / 2;
-                    else
-                        result(indices[j]) += funValues(ixy) * (1 - xy1) + funValues(ixy + 1) * xy1;
-                }
-            }
-        }
-
-        return result;
-    }
-
-    // Long interpolation (4 * 3 points)
-    else if (method == 5) {
-        Index num_points = xs.size();
-
-        assert(xs.size() == ys.size());
-
-        ArrayXs result = ArrayXs::Zero(num_points);
-
-        for (int direction = 0; direction < 2; direction++) {
-            // Gather all points on the same horizontal/vertical line
-            std::vector<Index> indices(num_points);
-            for (Index i = 0; i < num_points; i++) indices[i] = i;
-
-            auto &yxs = direction == 0 ? ys : xs;
-
-            std::sort(indices.begin(), indices.end(),
-                      [&yxs](Index i1, Index i2) { return yxs(i1) < yxs(i2); });
-
-            // iterate over each line
-            for (int i = 0; i < num_points; i++) {
-                int start = i;
-                while (i + 1 < num_points && yxs[indices[i]] == yxs[indices[i + 1]]) i++;
-
-                // Calculate function values on the line
-                Scalar yxVal = yxs[indices[start]];
-
-                Index lineSize = direction == 0 ? problem->tiles.rows() : problem->tiles.cols();
-                VectorXs funValues = ArrayXs::Zero(lineSize + 6);  // some zero values of padding left and right
-
-                Index iyx;
-                if (direction == 0)
-                    iyx = std::floor((yxVal - problem->grid.y(0)) / (problem->grid.y(1) - problem->grid.y(0))) + 1;
-                else
-                    iyx = std::floor((yxVal - problem->grid.x(0)) / (problem->grid.x(1) - problem->grid.x(0))) + 1;
-
-                for (int j = 0; j < lineSize; j++) {
-                    const Tile &tile = direction == 0 ? problem->tiles(j, iyx) : problem->tiles(iyx, j);
-                    if (tile.intersections[0] == nullptr) continue;  // leave function value as 0
-
-                    Array<Scalar, 2, 1> yxInput;
-                    yxInput << yxVal, yxVal;
-                    Array<Scalar, 2, 1> fyx0 = reconstructEigenfunction<Scalar>(
-                            direction == 0 ? tile.intersections[0]->thread.x : tile.intersections[0]->thread.y,
-                            direction == 0 ? c.topRows(problem->columns.x) : c.bottomRows(problem->columns.y), yxInput);
-                    funValues(j + 3) = fyx0(0);
-                }
-
-                /*
-                printf("Fun values: ");
-                for (int j = 0; j < funValues.size(); j++) printf("%.3f; ", funValues(j));
-                printf("\n");
-                 */
-
-                // Interpolate values
-                Matrix<Scalar, 6, 6> interpolationMat;
-                interpolationMat <<
-                           0,    0,  120,    0,    0,    0,
-                           6,  -60,  -40,  120,  -30,    4,
-                          -5,   80, -150,   80,   -5,    0,
-                          -5,   -5,   50,  -70,   35,   -5,
-                           5,  -20,   30,  -20,    5,    0,
-                          -1,    5,  -10,   10,   -5,    1;
-
-                interpolationMat /= 2*120;
-
-                // interpolate points
-                Scalar xy0 = direction == 0 ? problem->grid.x(0) : problem->grid.y(0);
-                Scalar hxy = direction == 0 ? problem->grid.x(1) - xy0 : problem->grid.y(1) - xy0;
-                xy0 -= 4 * hxy;
-
-                for (int j = start; j < i + 1; j++) {
-                    Scalar xyVal = direction == 0 ? xs(indices[j]) : ys(indices[j]);
-                    Index ixy = std::floor((xyVal - xy0) / hxy);
-                    Scalar xy1 = (xyVal - xy0) / hxy - ixy;
-
-                    assert(ixy - 2 >= 0 && ixy + 4 < funValues.size());
-                    assert(xy1 >= 0 && xy1 <= 1);
-
-                    VectorXs coeffs = interpolationMat * funValues.middleRows(ixy - 2, 6);
-
-                    result(indices[j]) += coeffs(0) + xy1 * (coeffs(1) + xy1 * (coeffs(2) + xy1 * (
-                            coeffs(3) + xy1 * (coeffs(4) + xy1 * coeffs(5)))));
-                }
-            }
-        }
-
-        return result;
-    }
-    // Solve Schrödinger inside the square with 4 points grid
-    else if (method == 6) {
-        ArrayXs result = ArrayXs::Zero(xs.size());
-
-        for (Index p = 0; p < xs.size(); p++) {
-            Scalar x = xs(p);
-            Scalar y = ys(p);
-
-            Index ix = highestLowerIndex(problem->grid.x, x);
-            Index iy = highestLowerIndex(problem->grid.y, y);
-
-            if (ix < 0 || ix >= problem->options.gridSize.x || iy < 0 || iy >= problem->options.gridSize.y) continue;
-
-            const Tile &tile = problem->tiles(ix + 1, iy + 1);
-
-            Scalar xOffset = problem->grid.x[ix];
-            Scalar yOffset = problem->grid.y[iy];
-            Scalar x1 = x - xOffset;
-            Scalar y1 = y - yOffset;
-            Scalar hx = problem->grid.x[1] - problem->grid.x[0];
-            Scalar hy = problem->grid.y[1] - problem->grid.y[0];
-
-            if (tile.intersections[0] == nullptr || tile.intersections[3] == nullptr) continue;
-
-            typedef Array<Scalar, 2, 1> Array2s;
-            Array2s vx, vy;
-            vx << xOffset + x1, xOffset + hx - x1;
-            vy << yOffset + y1, yOffset + hy - y1;
-            Array2s fy0 = reconstructEigenfunction<Scalar>(tile.intersections[0]->thread.y,
-                                                           c.bottomRows(problem->columns.y),
-                                                           vx);
-            Array2s fx0 = reconstructEigenfunction<Scalar>(tile.intersections[0]->thread.x,
-                                                           c.topRows(problem->columns.x), vy);
-            Array2s fy3 = reconstructEigenfunction<Scalar>(tile.intersections[3]->thread.y,
-                                                           c.bottomRows(problem->columns.y),
-                                                           vx);
-            Array2s fx3 = reconstructEigenfunction<Scalar>(tile.intersections[3]->thread.x,
-                                                           c.topRows(problem->columns.x), vy);
-
-            if (x == xOffset) {
-                result(p) = fx0(0);
-                continue;
-            }
-            if (y == yOffset) {
-                result(p) = fy0(0);
-                continue;
-            }
-
-            Matrix<Scalar, 4, 1> wx, wy;
-            Scalar nx = 2 / (hx * x1 - x1 * x1);
-            wx << (2 * hx - 3 * x1) * nx / hx, -2 * nx, nx, -(hx - 3 * x1) * nx / hx;
-            Scalar ny = 2 / (hy * y1 - y1 * y1);
-            wy << (2 * hy - 3 * y1) * ny / hy, -2 * ny, ny, -(hy - 3 * y1) * ny / hy;
-            {
-                Matrix<Scalar, 4, 4> w = Matrix<Scalar, 4, 4>::Zero();
-                Matrix<Scalar, 4, 1> b;
-                for (int i = 1; i <= 2; ++i)
-                    for (int j = 1; j <= 2; ++j) {
-                        b(2 * i + j - 3) =
-                                wx(3 * i - 3) * fx0(j - 1) + wx(6 - 3 * i) * fx3(j - 1) + wy(3 * j - 3) * fy0(i - 1) +
-                                wy(6 - 3 * j) * fy3(i - 1);
-
-                        w(2 * i + j - 3, 2 * i + j - 3) = problem->V(xs(i - 1), ys(j - 1)) - E - wx(1) - wy(1);
-                        w(2 * i + j - 3, 3 - 2 * i + j) = -wx(2);
-                        w(2 * i + j - 3, 2 * i - j) = -wy(2);
-                    }
-
-                result(p) = (w.inverse() * b)(0);
-            }
-        }
-
-        return result;
-    }
     // Enhanced Schrodinger method (finite difference method on a 3x3 grid)
-    else if (method == 7) {
-        ArrayXs result = ArrayXs::Zero(xs.size());
+    ArrayXs result = ArrayXs::Zero(xs.size());
 
-        for (Index p = 0; p < xs.size(); p++) {
-            Scalar x = xs(p);
-            Scalar y = ys(p);
+    for (Index p = 0; p < xs.size(); p++) {
+        Scalar x = xs(p);
+        Scalar y = ys(p);
 
-            Index ix = highestLowerIndex(problem->grid.x, x);
-            Index iy = highestLowerIndex(problem->grid.y, y);
+        Index ix = highestLowerIndex(problem->grid.x, x);
+        Index iy = highestLowerIndex(problem->grid.y, y);
 
-            if (ix < 0 || ix >= problem->options.gridSize.x || iy < 0 || iy >= problem->options.gridSize.y) continue;
+        if (ix < 0 || ix >= problem->options.gridSize.x || iy < 0 || iy >= problem->options.gridSize.y) continue;
 
-            const Tile &tile = problem->tiles(ix + 1, iy + 1);
+        const Tile &tile = problem->tiles(ix + 1, iy + 1);
 
-            Scalar xOffset = problem->grid.x[ix];
-            Scalar yOffset = problem->grid.y[iy];
-            Scalar hx = problem->grid.x[1] - problem->grid.x[0];
-            Scalar hy = problem->grid.y[1] - problem->grid.y[0];
+        Scalar xOffset = problem->grid.x[ix];
+        Scalar yOffset = problem->grid.y[iy];
+        Scalar hx = problem->grid.x[1] - problem->grid.x[0];
+        Scalar hy = problem->grid.y[1] - problem->grid.y[0];
 
-            Vector<Scalar, 5> xpoints;
-            xpoints << xOffset, xOffset + 0.25 * hx, xOffset + 0.5 * hx, xOffset + 0.75 * hx, xOffset + hx;
+        Vector<Scalar, 5> xpoints;
+        xpoints << xOffset, xOffset + 0.25 * hx, xOffset + 0.5 * hx, xOffset + 0.75 * hx, xOffset + hx;
 
-            Vector<Scalar, 5> ypoints;
-            ypoints << yOffset, yOffset + 0.25 * hy, yOffset + 0.5 * hy, yOffset + 0.75 * hy, yOffset + hy;
+        Vector<Scalar, 5> ypoints;
+        ypoints << yOffset, yOffset + 0.25 * hy, yOffset + 0.5 * hy, yOffset + 0.75 * hy, yOffset + hy;
 
-            // get function values for 3 points on each of the 4 sides (boundary conditions)
-            Matrix<Scalar, 5, 5> gridValues = Matrix<Scalar, 5, 5>::Zero();
+        // get function values for 3 points on each of the 4 sides (boundary conditions)
+        Matrix<Scalar, 5, 5> gridValues = Matrix<Scalar, 5, 5>::Zero();
 
-            if (tile.intersections[0] == nullptr || tile.intersections[1] == nullptr
-                || tile.intersections[2] == nullptr || tile.intersections[3] == nullptr) continue;
+        if (tile.intersections[0] == nullptr || tile.intersections[1] == nullptr
+            || tile.intersections[2] == nullptr || tile.intersections[3] == nullptr)
+            continue;
 
-            Array<Scalar, 3, 1> input;
-            Array<Scalar, 3, 1> output;
-            input << ypoints.segment(1, 3);
-            output = reconstructEigenfunction<Scalar>(
-                    tile.intersections[0]->thread.x, c.topRows(problem->columns.x), input);
-            gridValues.row(0).template segment<3>(1) = output;
+        Array<Scalar, 3, 1> input;
+        Array<Scalar, 3, 1> output;
+        input << ypoints.segment(1, 3);
+        output = reconstructEigenfunction<Scalar>(
+                tile.intersections[0]->thread.x, c.topRows(problem->columns.x), input);
+        gridValues.row(0).template segment<3>(1) = output;
 
-            output = reconstructEigenfunction<Scalar>(
-                    tile.intersections[1]->thread.x, c.topRows(problem->columns.x), input);
-            gridValues.row(4).template segment<3>(1) = output;
+        output = reconstructEigenfunction<Scalar>(
+                tile.intersections[1]->thread.x, c.topRows(problem->columns.x), input);
+        gridValues.row(4).template segment<3>(1) = output;
 
-            input << xpoints.segment(1, 3);
-            output = reconstructEigenfunction<Scalar>(
-                    tile.intersections[0]->thread.y, c.bottomRows(problem->columns.y), input);
-            gridValues.col(0).template segment<3>(1) = output;
+        input << xpoints.segment(1, 3);
+        output = reconstructEigenfunction<Scalar>(
+                tile.intersections[0]->thread.y, c.bottomRows(problem->columns.y), input);
+        gridValues.col(0).template segment<3>(1) = output;
 
-            output = reconstructEigenfunction<Scalar>(
-                    tile.intersections[2]->thread.y, c.bottomRows(problem->columns.y), input);
-            gridValues.col(4).template segment<3>(1) = output;
+        output = reconstructEigenfunction<Scalar>(
+                tile.intersections[2]->thread.y, c.bottomRows(problem->columns.y), input);
+        gridValues.col(4).template segment<3>(1) = output;
 
-            // finite diff formula coefficients
-            Matrix<Scalar, 3, 5> coeff;
-            coeff <<
-                    11, -20,   6,   4, -1,
-                    -1,  16, -30,  16, -1,
-                    -1,   4,   6, -20, 11;
-            coeff /= 12;
+        // finite diff formula coefficients
+        Matrix<Scalar, 3, 5> coeff;
+        coeff <<
+              11, -20, 6, 4, -1,
+                -1, 16, -30, 16, -1,
+                -1, 4, 6, -20, 11;
+        coeff /= 12;
 
-            Matrix<Scalar, 9, 9> A = Matrix<Scalar, 9, 9>::Zero();
-            Vector<Scalar, 9> B = Vector<Scalar, 9>::Zero();
+        Matrix<Scalar, 9, 9> A = Matrix<Scalar, 9, 9>::Zero();
+        Vector<Scalar, 9> B = Vector<Scalar, 9>::Zero();
 
-            for (int rx = 0; rx < 3; rx++) {
-                for (int ry = 0; ry < 3; ry++) {
-                    // - D^2 psi + (V - E) * psi = 0
+        for (int rx = 0; rx < 3; rx++) {
+            for (int ry = 0; ry < 3; ry++) {
+                // - D^2 psi + (V - E) * psi = 0
 
-                    A(rx + ry*3, rx + ry*3) = problem->V(xOffset + (rx+1)*hx/4., yOffset + (ry+1)*hy/4.) - E;
+                A(rx + ry * 3, rx + ry * 3) =
+                        problem->V(xOffset + (rx + 1) * hx / 4., yOffset + (ry + 1) * hy / 4.) - E;
 
-                    // Horizontal formula
-                    A(rx + ry*3, 0 + ry*3) -= 16./(hx*hx) * coeff(rx, 1);
-                    A(rx + ry*3, 1 + ry*3) -= 16./(hx*hx) * coeff(rx, 2);
-                    A(rx + ry*3, 2 + ry*3) -= 16./(hx*hx) * coeff(rx, 3);
-                    B(rx + ry*3) += 16./(hx*hx) * coeff(rx, 0)*gridValues(0, ry+1);
-                    B(rx + ry*3) += 16./(hx*hx) * coeff(rx, 4)*gridValues(4, ry+1);
+                // Horizontal formula
+                A(rx + ry * 3, 0 + ry * 3) -= 16. / (hx * hx) * coeff(rx, 1);
+                A(rx + ry * 3, 1 + ry * 3) -= 16. / (hx * hx) * coeff(rx, 2);
+                A(rx + ry * 3, 2 + ry * 3) -= 16. / (hx * hx) * coeff(rx, 3);
+                B(rx + ry * 3) += 16. / (hx * hx) * coeff(rx, 0) * gridValues(0, ry + 1);
+                B(rx + ry * 3) += 16. / (hx * hx) * coeff(rx, 4) * gridValues(4, ry + 1);
 
-                    // Vertical formula
-                    A(rx + ry*3, rx + 0) -= 16./(hy*hy) * coeff(ry, 1);
-                    A(rx + ry*3, rx + 3) -= 16./(hy*hy) * coeff(ry, 2);
-                    A(rx + ry*3, rx + 6) -= 16./(hy*hy) * coeff(ry, 3);
-                    B(rx + ry*3) += 16./(hy*hy) * coeff(ry, 0)*gridValues(rx+1, 0);
-                    B(rx + ry*3) += 16./(hy*hy) * coeff(ry, 4)*gridValues(rx+1, 4);
-                }
-            }
-
-            /*
-            printf("A:\n");
-            for (int i = 0; i < 9; i++) {
-                for (int j = 0; j < 9; j++) {
-                    printf("%10.6f ", A(i, j));
-                }
-                printf("\n");
-            }
-
-            printf("B:\n");
-            for (int i = 0; i < 9; i++) {
-                printf("%10.6f ", B(i));
-            }
-            printf("\n");
-            */
-
-            // Solve system
-            Vector<Scalar, 9> sol = A.partialPivLu().solve(B);
-
-            // 5x5 grid interpolation
-            for (size_t j = 0; j < 4; j++) {
-                if (tile.intersections[j] != nullptr)
-                    gridValues((j%2)*4, (j/2)*4) = functionValues.x[tile.intersections[j]->index];
-            }
-
-            gridValues.col(1).template segment<3>(1) = sol.template segment<3>(0);
-            gridValues.col(2).template segment<3>(1) = sol.template segment<3>(3);
-            gridValues.col(3).template segment<3>(1) = sol.template segment<3>(6);
-
-            /*
-            printf("Gridvalues: [%.6f, %.6f]x[%.6f, %.6f]\n", xOffset, xOffset+hx, yOffset, yOffset+hy);
-            for (int ry = 0; ry < 5; ry++) {
-                for (int rx = 0; rx < 5; rx++) {
-                    printf("%10.6f ", gridValues(rx, ry));
-                }
-                printf("\n");
-            }
-             */
-
-
-
-            // horizontal Lagrange polynomials
-            Vector<Scalar, 5> lx;
-            for (int i = 0; i < 5; i++) {
-                lx(i) = 1;
-                for (int j = 0; j < 5; j++) if (j != i)
-                    lx(i) *= (x - xpoints(j)) / (xpoints(i) - xpoints(j));
-            }
-
-            // vertical Lagrange polynomials
-            Vector<Scalar, 5> ly;
-            for (int i = 0; i < 5; i++) {
-                ly(i) = 1;
-                for (int j = 0; j < 5; j++) if (j != i)
-                        ly(i) *= (y - ypoints(j)) / (ypoints(i) - ypoints(j));
-            }
-
-            for (int rx = 0; rx < 5; rx++) {
-                for (int ry = 0; ry < 5; ry++) {
-                    result(p) += gridValues(rx, ry) * lx(rx) * ly(ry);
-                }
+                // Vertical formula
+                A(rx + ry * 3, rx + 0) -= 16. / (hy * hy) * coeff(ry, 1);
+                A(rx + ry * 3, rx + 3) -= 16. / (hy * hy) * coeff(ry, 2);
+                A(rx + ry * 3, rx + 6) -= 16. / (hy * hy) * coeff(ry, 3);
+                B(rx + ry * 3) += 16. / (hy * hy) * coeff(ry, 0) * gridValues(rx + 1, 0);
+                B(rx + ry * 3) += 16. / (hy * hy) * coeff(ry, 4) * gridValues(rx + 1, 4);
             }
         }
 
-        return result;
+        // Solve system
+        Vector<Scalar, 9> sol = A.partialPivLu().solve(B);
+
+        // 5x5 grid interpolation
+        for (size_t j = 0; j < 4; j++) {
+            if (tile.intersections[j] != nullptr)
+                gridValues((j % 2) * 4, (j / 2) * 4) = functionValues.x[tile.intersections[j]->index];
+        }
+
+        gridValues.col(1).template segment<3>(1) = sol.template segment<3>(0);
+        gridValues.col(2).template segment<3>(1) = sol.template segment<3>(3);
+        gridValues.col(3).template segment<3>(1) = sol.template segment<3>(6);
+
+
+
+        // horizontal Lagrange polynomials
+        Vector<Scalar, 5> lx;
+        for (int i = 0; i < 5; i++) {
+            lx(i) = 1;
+            for (int j = 0; j < 5; j++)
+                if (j != i)
+                    lx(i) *= (x - xpoints(j)) / (xpoints(i) - xpoints(j));
+        }
+
+        // vertical Lagrange polynomials
+        Vector<Scalar, 5> ly;
+        for (int i = 0; i < 5; i++) {
+            ly(i) = 1;
+            for (int j = 0; j < 5; j++)
+                if (j != i)
+                    ly(i) *= (y - ypoints(j)) / (ypoints(i) - ypoints(j));
+        }
+
+        for (int rx = 0; rx < 5; rx++) {
+            for (int ry = 0; ry < 5; ry++) {
+                result(p) += gridValues(rx, ry) * lx(rx) * ly(ry);
+            }
+        }
     }
 
-    return ArrayXs::Zero(1);
+    return result;
 }
 
 template
