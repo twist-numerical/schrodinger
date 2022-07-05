@@ -20,7 +20,7 @@ template<typename Scalar, typename Eigenfunction>
 inline void checkEigenpairs(
         const schrodinger::geometry::Domain<Scalar, 2> &domain,
         const std::vector<std::pair<Scalar, std::vector<std::function<Scalar(Scalar, Scalar)>>>> &expected,
-        const std::vector<std::pair<Scalar, Eigenfunction>> &found, Scalar tolerance = 1e-8
+        const std::vector<std::pair<Scalar, std::unique_ptr<Eigenfunction>>> &found, Scalar tolerance = 1e-8
 ) {
     typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> ArrayXs;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXXs;
@@ -74,7 +74,7 @@ inline void checkEigenpairs(
             REQUIRE(i < found.end());
             REQUIRE(Approx(e).epsilon(tolerance) == i->first);
 
-            ArrayXs v = i->second(xs, ys);
+            ArrayXs v = (*i->second)(xs, ys);
             othogonalCheck.col(std::distance(found.begin(), i)) = v;
 
             ArrayXs x = (zs.transpose() * zs).ldlt().solve(zs.transpose() * v.matrix()).array();
@@ -89,7 +89,7 @@ inline void checkEigenpairs(
     }
 
     for (; i < found.end(); ++i) {
-        othogonalCheck.col(std::distance(found.begin(), i)) = i->second(xs, ys);
+        othogonalCheck.col(std::distance(found.begin(), i)) = (*i->second)(xs, ys);
     }
 
     MatrixXXs errors = ((xmax - xmin) * (ymax - ymin) / ((n + 1) * (n + 1) * n * n)) * othogonalCheck.transpose() *

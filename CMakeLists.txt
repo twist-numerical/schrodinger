@@ -15,7 +15,7 @@ else ()
     add_compile_options(-Wall -Wextra -Werror -Wno-missing-field-initializers)
 endif ()
 
-SET(SCHRODINGER_SRC src/schrodinger2d.cpp)
+SET(SCHRODINGER_SRC src/schrodinger2d/eigenfunction.cpp src/schrodinger2d/schrodinger2d.cpp)
 
 add_library(schrodinger ${SCHRODINGER_SRC})
 

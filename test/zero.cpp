@@ -35,7 +35,7 @@ TEST_CASE("Zero potential eigenfunction", "[zero]") {
                             });
 
     auto eigenfunctions = s.eigenfunctions();
-    std::sort(eigenfunctions.begin(), eigenfunctions.end(), [](auto a, auto b) { return a.first < b.first; });
+    std::sort(eigenfunctions.begin(), eigenfunctions.end(), [](auto &a, auto &b) { return a.first < b.first; });
     eigenfunctions.erase(eigenfunctions.begin() + 20, eigenfunctions.end());
 
     std::map<int, std::vector<std::pair<int, int>>> sumOfSquares;

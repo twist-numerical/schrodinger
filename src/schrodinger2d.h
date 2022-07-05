@@ -7,6 +7,8 @@
 
 #include <matslise/matslise.h>
 #include <Eigen/Dense>
+#include <vector>
+#include <optional>
 #include "domain.h"
 #include "util/polymorphic_value.h"
 
@@ -74,43 +76,29 @@ namespace schrodinger {
 
         std::vector<Scalar> eigenvalues() const;
 
-        std::vector<std::pair<Scalar, Eigenfunction>> eigenfunctions() const;
+        std::vector<std::pair<Scalar, std::unique_ptr<Eigenfunction>>> eigenfunctions() const;
     };
 
     template<typename Scalar>
     class Schrodinger2D<Scalar>::Eigenfunction {
+        class EigenfunctionTile;
+
         const Schrodinger2D<Scalar> *problem;
         Scalar E;
         VectorXs c;
 
     public:
+        std::vector<std::unique_ptr<EigenfunctionTile>> tiles;
         // Function values evaluated in each intersection point
         PerDirection<VectorXs> functionValues;
 
-        Eigenfunction(const Schrodinger2D *problem, Scalar E, const VectorXs &c)
-                : problem(problem), E(E), c(c) {
-
-            // Initialize function values
-            size_t numIntersections = problem->intersections.size();
-            functionValues.x = VectorXs::Zero(numIntersections);
-            functionValues.y = VectorXs::Zero(numIntersections);
-
-            for (size_t i = 0; i < numIntersections; i++) {
-                Intersection intersection = problem->intersections[i];
-
-                const Thread *tx = intersection.thread.x;
-                functionValues.x(i) = intersection.evaluation.x.matrix().dot(
-                        c.segment(tx->offset, tx->eigenpairs.size()));
-
-                const Thread *ty = intersection.thread.y;
-                functionValues.y(i) = intersection.evaluation.y.matrix().dot(
-                        c.segment(problem->columns.x + ty->offset, ty->eigenpairs.size()));
-            }
-        }
+        Eigenfunction(const Schrodinger2D<Scalar> *problem, Scalar E, const VectorXs &c);
 
         Scalar operator()(Scalar x, Scalar y) const;
 
         ArrayXs operator()(ArrayXs x, ArrayXs y) const;
+
+        ~Eigenfunction();
     };
 }
 
