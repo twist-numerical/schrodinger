@@ -38,6 +38,10 @@ TEST_CASE("Zero potential eigenfunction", "[zero]") {
     std::sort(eigenfunctions.begin(), eigenfunctions.end(), [](auto &a, auto &b) { return a.first < b.first; });
     eigenfunctions.erase(eigenfunctions.begin() + 20, eigenfunctions.end());
 
+    REQUIRE((*eigenfunctions[0].second)(0.1, 0.1) == 0);
+
+    return;
+
     std::map<int, std::vector<std::pair<int, int>>> sumOfSquares;
     for (int i = 1; i < 10; ++i)
         for (int j = 1; j < 10; ++j)
@@ -51,7 +55,6 @@ TEST_CASE("Zero potential eigenfunction", "[zero]") {
             int i, j;
             std::tie(i, j) = ij;
             functions.emplace_back([=](double x, double y) {
-                std::cout << i << ", " << j << ": " << x << ", " << y << std::endl;
                 return std::sin(i * x) * std::sin(j * y);
             });
         }

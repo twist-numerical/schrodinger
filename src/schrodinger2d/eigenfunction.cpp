@@ -51,30 +51,35 @@ public:
     void initialize(const Eigenfunction &ef) {
         if (initialized) return;
 
-        Vector<Scalar, size> xPoints = Vector<Scalar, size>::LinSpaced(
+        Matrix<Scalar, size, 1> xPoints = Matrix<Scalar, size, 1>::LinSpaced(
                 reference->bounds.template min<0>(),
                 reference->bounds.template max<0>());
-        Vector<Scalar, size - 2> yPoints = Vector<Scalar, size>::LinSpaced(
+        Matrix<Scalar, size - 2, 1> yPoints = Matrix<Scalar, size, 1>::LinSpaced(
                 reference->bounds.template min<1>(),
                 reference->bounds.template max<1>()).template segment<size - 2>(1);
 
         eigenfunction = Array<Scalar, size, size>::Zero(size, size);
 
-        eigenfunction.row(0) = reconstructEigenfunction<Scalar, size>(
-                getThread<&PerDirection<const Thread *>::x>(0, 1),
-                ef.c.template topRows(ef.problem->columns.x), xPoints);
+        auto getXValues = [&](int i1, int i2) -> Array<Scalar, size, 1> {
+            const Thread *thread = getThread<&PerDirection<const Thread *>::x>(i1, i2);
+            if (thread == nullptr)
+                return Array<Scalar, size, 1>::Zero();
+            return reconstructEigenfunction<Scalar, size>(thread, ef.c.topRows(ef.problem->columns.x), xPoints);
+        };
+        auto getYValues = [&](int i1, int i2) -> Array<Scalar, size - 2, 1> {
+            const Thread *thread = getThread<&PerDirection<const Thread *>::y>(i1, i2);
+            if (thread == nullptr)
+                return Array<Scalar, size - 2, 1>::Zero();
+            return reconstructEigenfunction<Scalar, size - 2>(thread, ef.c.bottomRows(ef.problem->columns.x), yPoints);
+        };
 
-        eigenfunction.col(0).segment(1, size - 2) = reconstructEigenfunction<Scalar, size - 2>(
-                getThread<&PerDirection<const Thread *>::y>(0, 3),
-                ef.c.template bottomRows(ef.problem->columns.y), yPoints);
+        eigenfunction.row(0) = getXValues(0, 1);
 
-        eigenfunction.row(size - 1) = reconstructEigenfunction<Scalar, size>(
-                getThread<&PerDirection<const Thread *>::x>(2, 3),
-                ef.c.template topRows(ef.problem->columns.x), xPoints);
+        eigenfunction.col(0).segment(1, size - 2) = getYValues(0, 3);
 
-        eigenfunction.col(size - 1).segment(1, size - 2) = reconstructEigenfunction<Scalar, size - 2>(
-                getThread<&PerDirection<const Thread *>::y>(1, 2),
-                ef.c.template bottomRows(ef.problem->columns.y), yPoints);
+        eigenfunction.row(size - 1) = getXValues(2, 3);
+
+        eigenfunction.col(size - 1).segment(1, size - 2) = getYValues(1, 2);
 
         static_assert(size >= 5);
 
@@ -115,13 +120,12 @@ public:
                          ) / (dy * dy);
             }
 
-        Eigen::Vector<Scalar, 9> sol = A.partialPivLu().solve(b);
+        Eigen::Matrix<Scalar, 9, 1> sol = A.partialPivLu().solve(b);
         for (int rx = 1; rx + 1 < size; rx++)
             for (int ry = 1; ry + 1 < size; ry++) {
                 int k = rx - 1 + (ry - 1) * (size - 2);
                 eigenfunction(rx, ry) = sol(k);
             }
-
 
         initialized = true;
     }
@@ -134,9 +138,11 @@ public:
 
     template<const Thread *PerDirection<const Thread *>::*x>
     const Thread *getThread(int i1, int i2) {
-        const Thread *t1 = reference->intersections[i1]->thread.*x;
-        if (t1 != nullptr) return t1;
-        return reference->intersections[i2]->thread.*x;
+        Intersection *int1 = reference->intersections[i1];
+        if (int1 != nullptr && int1->thread.*x != nullptr)
+            return int1->thread.*x;
+        Intersection *int2 = reference->intersections[i2];
+        return int2 == nullptr ? nullptr : int2->thread.*x;
     }
 };
 

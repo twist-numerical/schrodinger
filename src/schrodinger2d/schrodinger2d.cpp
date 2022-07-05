@@ -170,11 +170,11 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
     }
 
     {
-        std::map<std::pair<int, int>, Intersection *> intersectionsMap{};
+        std::map<std::pair<Index, Index>, Intersection *> intersectionsMap{};
         size_t maxCapacity = (1 + threads.x.size()) * (1 + threads.y.size());
         tiles.reserve(maxCapacity);
 
-        auto getTile = [&](int i, int j, int dx, int dy, int t1, int t2, int t3, int xi, int yi) -> Tile * {
+        auto getTile = [&](Index i, Index j, int dx, int dy, int t1, int t2, int t3, int xi, int yi) -> Tile * {
             auto f1 = intersectionsMap.find({i + dx, j});
             if (f1 != intersectionsMap.end() && f1->second->tiles[t1] != nullptr)
                 return f1->second->tiles[t1];
@@ -184,6 +184,7 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
             auto f3 = intersectionsMap.find({i, j + dy});
             if (f3 != intersectionsMap.end() && f3->second->tiles[t3] != nullptr)
                 return f3->second->tiles[t3];
+            tiles.emplace_back();
             tiles.back().index = {xi, yi};
             return &tiles.back();
         };
@@ -201,6 +202,8 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
                 assert(intersection.tiles[k]->intersections[k] == nullptr);
                 intersection.tiles[k]->intersections[k] = &intersection;
             }
+
+            intersectionsMap.emplace(std::make_pair(i, j), &intersection);
         }
 
         assert(maxCapacity == tiles.capacity());

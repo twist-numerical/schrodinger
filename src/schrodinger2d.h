@@ -1,12 +1,8 @@
-//
-// Created by toon on 4/8/21.
-//
-
 #ifndef SCHRODINGER2D_SCHRODINGER2D_H
 #define SCHRODINGER2D_SCHRODINGER2D_H
 
 #include <matslise/matslise.h>
-#include <Eigen/Dense>
+#include <Eigen/Core>
 #include <vector>
 #include <map>
 #include <optional>

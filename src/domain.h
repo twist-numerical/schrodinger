@@ -163,7 +163,7 @@ namespace schrodinger::geometry {
 
         template<int axis>
         Scalar &max() {
-            return bounds_[2 * axis];
+            return bounds_[2 * axis + 1];
         }
 
         template<int axis>
@@ -173,7 +173,7 @@ namespace schrodinger::geometry {
 
         template<int axis>
         const Scalar &max() const {
-            return bounds_[2 * axis];
+            return bounds_[2 * axis + 1];
         }
 
         virtual bool contains(const Vector<Scalar, d> &point) const override {
