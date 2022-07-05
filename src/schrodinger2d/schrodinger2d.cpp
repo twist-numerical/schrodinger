@@ -2,6 +2,7 @@
 #include "../util/polymorphic_value.h"
 #include "../schrodinger2d.h"
 #include <numeric>
+#include <map>
 #include "../util/right_kernel.h"
 #include "../util/rectangular_pencil.h"
 #include <chrono>
@@ -169,14 +170,57 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
     }
 
     {
-        tiles.resize(options.gridSize.x + 1, options.gridSize.y + 1);
+        std::map<std::pair<int, int>, Intersection *> intersectionsMap{};
+        size_t maxCapacity = (1 + threads.x.size()) * (1 + threads.y.size());
+        tiles.reserve(maxCapacity);
+
+        auto getTile = [&](int i, int j, int dx, int dy, int t1, int t2, int t3, int xi, int yi) -> Tile * {
+            auto f1 = intersectionsMap.find({i + dx, j});
+            if (f1 != intersectionsMap.end() && f1->second->tiles[t1] != nullptr)
+                return f1->second->tiles[t1];
+            auto f2 = intersectionsMap.find({i + dx, j + dy});
+            if (f2 != intersectionsMap.end() && f2->second->tiles[t2] != nullptr)
+                return f2->second->tiles[t2];
+            auto f3 = intersectionsMap.find({i, j + dy});
+            if (f3 != intersectionsMap.end() && f3->second->tiles[t3] != nullptr)
+                return f3->second->tiles[t3];
+            tiles.back().index = {xi, yi};
+            return &tiles.back();
+        };
+
         for (auto &intersection: intersections) {
             Index i = intersection.thread.x->valueIndex;
             Index j = intersection.thread.y->valueIndex;
-            tiles(i + 1, j + 1).intersections[0] = &intersection;
-            tiles(i, j + 1).intersections[1] = &intersection;
-            tiles(i + 1, j).intersections[2] = &intersection;
-            tiles(i, j).intersections[3] = &intersection;
+
+            intersection.tiles[0] = getTile(i, j, 1, 1, 1, 2, 3, i, j);
+            intersection.tiles[1] = getTile(i, j, -1, 1, 0, 3, 2, i - 1, j);
+            intersection.tiles[2] = getTile(i, j, -1, -1, 3, 0, 1, i - 1, j - 1);
+            intersection.tiles[3] = getTile(i, j, 1, -1, 2, 1, 0, i, j - 1);
+
+            for (int k = 0; k < 4; ++k) {
+                assert(intersection.tiles[k]->intersections[k] == nullptr);
+                intersection.tiles[k]->intersections[k] = &intersection;
+            }
+        }
+
+        assert(maxCapacity == tiles.capacity());
+
+        Scalar xmin, xmax, ymin, ymax;
+        std::tie(xmin, xmax) = domain->bounds(Eigen::Matrix<Scalar, 2, 2>::Identity().col(0));
+        std::tie(ymin, ymax) = domain->bounds(Eigen::Matrix<Scalar, 2, 2>::Identity().col(1));
+
+        auto fx = [](const auto &arr, int a, int b, const Scalar &c) {
+            return arr[a] != nullptr ? arr[a]->position.x : arr[b] != nullptr ? arr[b]->position.x : c;
+        };
+        auto fy = [](const auto &arr, int a, int b, const Scalar &c) {
+            return arr[a] != nullptr ? arr[a]->position.y : arr[b] != nullptr ? arr[b]->position.y : c;
+        };
+
+        for (auto &tile: tiles) {
+            tile.bounds.template min<0>() = fx(tile.intersections, 0, 3, xmin);
+            tile.bounds.template max<0>() = fx(tile.intersections, 1, 2, xmax);
+            tile.bounds.template min<1>() = fy(tile.intersections, 0, 1, ymin);
+            tile.bounds.template max<1>() = fy(tile.intersections, 2, 3, ymax);
         }
     }
 }

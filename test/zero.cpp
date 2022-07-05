@@ -50,7 +50,7 @@ TEST_CASE("Zero potential eigenfunction", "[zero]") {
         for (auto &ij: sij.second) {
             int i, j;
             std::tie(i, j) = ij;
-            functions.push_back([=](double x, double y) {
+            functions.emplace_back([=](double x, double y) {
                 std::cout << i << ", " << j << ": " << x << ", " << y << std::endl;
                 return std::sin(i * x) * std::sin(j * y);
             });

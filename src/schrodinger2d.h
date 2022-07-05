@@ -8,6 +8,7 @@
 #include <matslise/matslise.h>
 #include <Eigen/Dense>
 #include <vector>
+#include <map>
 #include <optional>
 #include "domain.h"
 #include "util/polymorphic_value.h"
@@ -30,6 +31,8 @@ namespace schrodinger {
     public:
         class Eigenfunction;
 
+        static constexpr const int interpolationGridSize = 5;
+
         typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> ArrayXs;
         typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXs;
         typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorXs;
@@ -44,22 +47,30 @@ namespace schrodinger {
             std::vector<std::pair<Scalar, std::unique_ptr<typename matslise::Matslise<Scalar>::Eigenfunction>>> eigenpairs;
         };
 
+        struct Tile;
+
         struct Intersection {
             size_t index; // index in the list of intersections
             PerDirection<Scalar> position;
             PerDirection<const Thread *> thread;
             PerDirection<ArrayXs> evaluation;
+            // [top-left, top-right, bottom-right, bottom-left]
+            std::array<Tile *, 4> tiles = {nullptr, nullptr, nullptr, nullptr};
         };
 
         struct Tile {
-            std::array<Intersection *, 4> intersections = {nullptr, nullptr, nullptr,
-                                                           nullptr}; // [(xmin,ymin), (xmax, ymin), (xmin, ymax), (xmax, ymax)]
+            std::pair<int, int> index;
+            geometry::Rectangle<Scalar, 2> bounds;
+            // [(xmax, ymin), (xmin,ymin), (xmin, ymax), (xmax, ymax)]
+            std::array<Intersection *, 4> intersections = {nullptr, nullptr, nullptr, nullptr};
+            mutable std::optional<Eigen::Array<Scalar, interpolationGridSize - 2, interpolationGridSize - 2>> potential;
+
         };
 
         PerDirection<ArrayXs> grid;
         PerDirection<std::vector<Thread>> threads;
         std::vector<Intersection> intersections;
-        Eigen::Array<Tile, Eigen::Dynamic, Eigen::Dynamic> tiles;
+        std::vector<Tile> tiles;
         PerDirection<size_t> columns;
 
         std::function<Scalar(Scalar, Scalar)> V;
@@ -89,8 +100,7 @@ namespace schrodinger {
 
     public:
         std::vector<std::unique_ptr<EigenfunctionTile>> tiles;
-        // Function values evaluated in each intersection point
-        PerDirection<VectorXs> functionValues;
+        std::map<std::pair<int, int>, EigenfunctionTile *> tilesMap;
 
         Eigenfunction(const Schrodinger2D<Scalar> *problem, Scalar E, const VectorXs &c);
 
