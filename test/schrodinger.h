@@ -78,9 +78,6 @@ inline void checkEigenpairs(
             othogonalCheck.col(std::distance(found.begin(), i)) = v;
 
             ArrayXs x = (zs.transpose() * zs).ldlt().solve(zs.transpose() * v.matrix()).array();
-            std::cout << x.transpose() << std::endl;
-            std::cout << (zs.col(0) * x[0]).transpose() << std::endl;
-            std::cout << (v).transpose() << std::endl;
 
             REQUIRE((zs * x.matrix() - v.matrix()).norm() < tolerance);
 

@@ -22,7 +22,7 @@ getTilePotential(const Schrodinger2D<Scalar> &problem, const typename Schrodinge
 
         for (int i = 1; i < size - 1; ++i)
             for (int j = 1; j < size - 1; ++j)
-                (*tile->potential)(i - 1, j - 1) = problem.V(Scalar(i) / size, Scalar(j) / size);
+                (*tile->potential)(j - 1, i - 1) = problem.V(Scalar(i) / (size - 1), Scalar(j) / (size - 1));
     }
     return *tile->potential;
 }
@@ -51,26 +51,21 @@ public:
     void initialize(const Eigenfunction &ef) {
         if (initialized) return;
 
-        Matrix<Scalar, size, 1> xPoints = Matrix<Scalar, size, 1>::LinSpaced(
-                reference->bounds.template min<0>(),
-                reference->bounds.template max<0>());
-        Matrix<Scalar, size - 2, 1> yPoints = Matrix<Scalar, size, 1>::LinSpaced(
-                reference->bounds.template min<1>(),
-                reference->bounds.template max<1>()).template segment<size - 2>(1);
-
         eigenfunction = Array<Scalar, size, size>::Zero(size, size);
 
         auto getXValues = [&](int i1, int i2) -> Array<Scalar, size, 1> {
             const Thread *thread = getThread<&PerDirection<const Thread *>::x>(i1, i2);
             if (thread == nullptr)
                 return Array<Scalar, size, 1>::Zero();
-            return reconstructEigenfunction<Scalar, size>(thread, ef.c.topRows(ef.problem->columns.x), xPoints);
+            return reconstructEigenfunction<Scalar, size>(
+                    thread, ef.c.topRows(ef.problem->columns.x), reference->grid.x);
         };
         auto getYValues = [&](int i1, int i2) -> Array<Scalar, size - 2, 1> {
             const Thread *thread = getThread<&PerDirection<const Thread *>::y>(i1, i2);
             if (thread == nullptr)
                 return Array<Scalar, size - 2, 1>::Zero();
-            return reconstructEigenfunction<Scalar, size - 2>(thread, ef.c.bottomRows(ef.problem->columns.x), yPoints);
+            return reconstructEigenfunction<Scalar, size - 2>(
+                    thread, ef.c.bottomRows(ef.problem->columns.y), reference->grid.y.segment(1, size - 2));
         };
 
         eigenfunction.row(0) = getXValues(0, 1);
@@ -108,7 +103,7 @@ public:
         for (int rx = 1; rx + 1 < size; rx++)
             for (int ry = 1; ry + 1 < size; ry++) {
                 int k = rx - 1 + (ry - 1) * (size - 2);
-                A(k, k) += potential(rx - 1, ry - 1) - ef.E;
+                A(k, k) += potential(ry - 1, rx - 1) - ef.E;
 
                 b(k) = (
                                coeff(rx - 1, 0) * eigenfunction(ry, 0)
@@ -119,21 +114,48 @@ public:
                                  + coeff(ry - 1, size - 1) * eigenfunction(size - 1, rx)
                          ) / (dy * dy);
             }
-
+        // std::cout << b.transpose() << std::endl;
         Eigen::Matrix<Scalar, 9, 1> sol = A.partialPivLu().solve(b);
         for (int rx = 1; rx + 1 < size; rx++)
             for (int ry = 1; ry + 1 < size; ry++) {
                 int k = rx - 1 + (ry - 1) * (size - 2);
-                eigenfunction(rx, ry) = sol(k);
+                eigenfunction(ry, rx) = sol(k);
             }
 
         initialized = true;
     }
 
+    static Eigen::Matrix<Scalar, size, 1> lagrange(Scalar x) {
+        Eigen::Matrix<Scalar, size, 1> r;
+        for (int i = 0; i < size; ++i) {
+            r(i) = 1;
+            for (int j = 0; j < size; j++)
+                if (j != i)
+                    r(i) *= (size - 1) * (x - Scalar(j) / (size - 1)) / (i - j);
+        }
+        return r;
+    }
+
     Scalar operator()(Scalar x, Scalar y) {
-        (void) x;
-        (void) y;
-        return eigenfunction(2, 2);
+        const Scalar &xmin = reference->bounds.template min<0>();
+        const Scalar &xmax = reference->bounds.template max<0>();
+        Eigen::Matrix<Scalar, size, 1> lx = lagrange((x - xmin) / (xmax - xmin));
+
+        const Scalar &ymin = reference->bounds.template min<1>();
+        const Scalar &ymax = reference->bounds.template max<1>();
+        Eigen::Matrix<Scalar, size, 1> ly = lagrange((y - ymin) / (ymax - ymin));
+
+        Scalar r = 0;
+
+        // std::cout << eigenfunction << std::endl;
+
+        for (int rx = 0; rx < size; rx++) {
+            for (int ry = 0; ry < size; ry++) {
+                r += eigenfunction(rx, ry) * lx(rx) * ly(ry);
+            }
+        }
+
+        return r;
     }
 
     template<const Thread *PerDirection<const Thread *>::*x>
@@ -200,32 +222,6 @@ Schrodinger2D<Scalar>::Eigenfunction::operator()(ArrayXs xs, ArrayXs ys) const {
             tile.initialize(*this);
 
         result(p) = tile(x, y);
-
-/*
-        // horizontal Lagrange polynomials
-        Eigen::Vector<Scalar, 5> lx;
-        for (int i = 0; i < 5; i++) {
-            lx(i) = 1;
-            for (int j = 0; j < 5; j++)
-                if (j != i)
-                    lx(i) *= (x - xpoints(j)) / (xpoints(i) - xpoints(j));
-        }
-
-        // vertical Lagrange polynomials
-        Eigen::Vector<Scalar, 5> ly;
-        for (int i = 0; i < 5; i++) {
-            ly(i) = 1;
-            for (int j = 0; j < 5; j++)
-                if (j != i)
-                    ly(i) *= (y - ypoints(j)) / (ypoints(i) - ypoints(j));
-        }
-
-        for (int rx = 0; rx < 5; rx++) {
-            for (int ry = 0; ry < 5; ry++) {
-                result(p) += gridValues(rx, ry) * lx(rx) * ly(ry);
-            }
-        }
-        */
     }
 
     return result;

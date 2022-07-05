@@ -38,7 +38,7 @@ TEST_CASE("Zero potential eigenfunction", "[zero]") {
     std::sort(eigenfunctions.begin(), eigenfunctions.end(), [](auto &a, auto &b) { return a.first < b.first; });
     eigenfunctions.erase(eigenfunctions.begin() + 20, eigenfunctions.end());
 
-    REQUIRE((*eigenfunctions[0].second)(0.1, 0.1) == 0);
+    REQUIRE((*eigenfunctions[0].second)(0.5, 0.5) == 0);
 
     return;
 

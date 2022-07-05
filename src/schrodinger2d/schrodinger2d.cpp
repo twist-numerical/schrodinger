@@ -224,6 +224,13 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
             tile.bounds.template max<0>() = fx(tile.intersections, 1, 2, xmax);
             tile.bounds.template min<1>() = fy(tile.intersections, 0, 1, ymin);
             tile.bounds.template max<1>() = fy(tile.intersections, 2, 3, ymax);
+
+            tile.grid.x = Matrix<Scalar, interpolationGridSize, 1>::LinSpaced(
+                    tile.bounds.template min<0>(),
+                    tile.bounds.template max<0>());
+            tile.grid.y = Matrix<Scalar, interpolationGridSize, 1>::LinSpaced(
+                    tile.bounds.template min<1>(),
+                    tile.bounds.template max<1>());
         }
     }
 }

@@ -60,7 +60,7 @@ namespace schrodinger {
             // [(xmax, ymin), (xmin,ymin), (xmin, ymax), (xmax, ymax)]
             std::array<Intersection *, 4> intersections = {nullptr, nullptr, nullptr, nullptr};
             mutable std::optional<Eigen::Array<Scalar, interpolationGridSize - 2, interpolationGridSize - 2>> potential;
-
+            PerDirection<Eigen::Matrix<Scalar, interpolationGridSize, 1>> grid;
         };
 
         PerDirection<ArrayXs> grid;
