@@ -70,7 +70,6 @@ inline void checkEigenpairs(
         }
 
         for (size_t j = 0; j < ef.second.size(); ++j) {
-
             REQUIRE(i < found.end());
             REQUIRE(Approx(e).epsilon(tolerance) == i->first);
 
@@ -79,7 +78,7 @@ inline void checkEigenpairs(
 
             ArrayXs x = (zs.transpose() * zs).ldlt().solve(zs.transpose() * v.matrix()).array();
 
-            REQUIRE((zs * x.matrix() - v.matrix()).norm() < tolerance);
+            REQUIRE((zs * x.matrix() - v.matrix()).norm() < 1e-4);
 
             ++i;
         }

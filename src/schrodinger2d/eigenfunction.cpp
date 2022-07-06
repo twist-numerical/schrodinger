@@ -53,19 +53,19 @@ public:
 
         eigenfunction = Array<Scalar, size, size>::Zero(size, size);
 
-        auto getXValues = [&](int i1, int i2) -> Array<Scalar, size, 1> {
-            const Thread *thread = getThread<&PerDirection<const Thread *>::x>(i1, i2);
-            if (thread == nullptr)
-                return Array<Scalar, size, 1>::Zero();
-            return reconstructEigenfunction<Scalar, size>(
-                    thread, ef.c.topRows(ef.problem->columns.x), reference->grid.x);
-        };
         auto getYValues = [&](int i1, int i2) -> Array<Scalar, size - 2, 1> {
-            const Thread *thread = getThread<&PerDirection<const Thread *>::y>(i1, i2);
+            const Thread *thread = getThread<&PerDirection<const Thread *>::x>(i1, i2);
             if (thread == nullptr)
                 return Array<Scalar, size - 2, 1>::Zero();
             return reconstructEigenfunction<Scalar, size - 2>(
-                    thread, ef.c.bottomRows(ef.problem->columns.y), reference->grid.y.segment(1, size - 2));
+                    thread, ef.c.topRows(ef.problem->columns.x), reference->grid.y.template segment<size - 2>(1));
+        };
+        auto getXValues = [&](int i1, int i2) -> Array<Scalar, size, 1> {
+            const Thread *thread = getThread<&PerDirection<const Thread *>::y>(i1, i2);
+            if (thread == nullptr)
+                return Array<Scalar, size, 1>::Zero();
+            return reconstructEigenfunction<Scalar, size>(
+                    thread, ef.c.bottomRows(ef.problem->columns.y), reference->grid.x);
         };
 
         eigenfunction.row(0) = getXValues(0, 1);
@@ -114,7 +114,7 @@ public:
                                  + coeff(ry - 1, size - 1) * eigenfunction(size - 1, rx)
                          ) / (dy * dy);
             }
-        // std::cout << b.transpose() << std::endl;
+
         Eigen::Matrix<Scalar, 9, 1> sol = A.partialPivLu().solve(b);
         for (int rx = 1; rx + 1 < size; rx++)
             for (int ry = 1; ry + 1 < size; ry++) {
@@ -136,7 +136,7 @@ public:
         return r;
     }
 
-    Scalar operator()(Scalar x, Scalar y) {
+    Scalar operator()(const Scalar &x, const Scalar &y) const {
         const Scalar &xmin = reference->bounds.template min<0>();
         const Scalar &xmax = reference->bounds.template max<0>();
         Eigen::Matrix<Scalar, size, 1> lx = lagrange((x - xmin) / (xmax - xmin));
@@ -147,24 +147,22 @@ public:
 
         Scalar r = 0;
 
-        // std::cout << eigenfunction << std::endl;
-
         for (int rx = 0; rx < size; rx++) {
             for (int ry = 0; ry < size; ry++) {
-                r += eigenfunction(rx, ry) * lx(rx) * ly(ry);
+                r += eigenfunction(ry, rx) * lx(rx) * ly(ry);
             }
         }
 
         return r;
     }
 
-    template<const Thread *PerDirection<const Thread *>::*x>
+    template<const Thread *PerDirection<const Thread *>::*u>
     const Thread *getThread(int i1, int i2) {
         Intersection *int1 = reference->intersections[i1];
-        if (int1 != nullptr && int1->thread.*x != nullptr)
-            return int1->thread.*x;
+        if (int1 != nullptr && int1->thread.*u != nullptr)
+            return int1->thread.*u;
         Intersection *int2 = reference->intersections[i2];
-        return int2 == nullptr ? nullptr : int2->thread.*x;
+        return int2 == nullptr ? nullptr : int2->thread.*u;
     }
 };
 
@@ -189,13 +187,17 @@ Index highestLowerIndex(const Array<Scalar, Dynamic, 1> &range, Scalar value) {
 
 template<typename Scalar>
 Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) const {
+    Index ix = highestLowerIndex(problem->grid.x, x) + 1;
+    Index iy = highestLowerIndex(problem->grid.y, y) + 1;
 
-    ArrayXs xs = ArrayXs::Zero(1);
-    xs(0) = x;
-    ArrayXs ys = ArrayXs::Zero(1);
-    ys(0) = y;
+    auto tileIt = tilesMap.find({ix, iy});
+    if (tileIt == tilesMap.end()) throw std::runtime_error("No tile found.");
 
-    return this->operator()(xs, ys)(0);
+    EigenfunctionTile &tile = *tileIt->second;
+    if (!tile.initialized)
+        tile.initialize(*this);
+
+    return tile(x, y);
 }
 
 
@@ -204,25 +206,10 @@ Eigen::Array<Scalar, Eigen::Dynamic, 1>
 Schrodinger2D<Scalar>::Eigenfunction::operator()(ArrayXs xs, ArrayXs ys) const {
     assert(xs.size() == ys.size());
 
-    // Enhanced Schrodinger method (finite difference method on a 3x3 grid)
     ArrayXs result = ArrayXs::Zero(xs.size());
 
-    for (Index p = 0; p < xs.size(); p++) {
-        Scalar x = xs(p);
-        Scalar y = ys(p);
-
-        Index ix = highestLowerIndex(problem->grid.x, x);
-        Index iy = highestLowerIndex(problem->grid.y, y);
-
-        auto tileIt = tilesMap.find({ix, iy});
-        if (tileIt == tilesMap.end()) throw std::runtime_error("No tile found.");
-
-        EigenfunctionTile &tile = *tileIt->second;
-        if (!tile.initialized)
-            tile.initialize(*this);
-
-        result(p) = tile(x, y);
-    }
+    for (Index p = 0; p < xs.size(); p++)
+        result(p) = (*this)(xs(p), ys(p));
 
     return result;
 }

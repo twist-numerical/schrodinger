@@ -193,10 +193,10 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
             Index i = intersection.thread.x->valueIndex;
             Index j = intersection.thread.y->valueIndex;
 
-            intersection.tiles[0] = getTile(i, j, 1, 1, 1, 2, 3, i, j);
-            intersection.tiles[1] = getTile(i, j, -1, 1, 0, 3, 2, i - 1, j);
-            intersection.tiles[2] = getTile(i, j, -1, -1, 3, 0, 1, i - 1, j - 1);
-            intersection.tiles[3] = getTile(i, j, 1, -1, 2, 1, 0, i, j - 1);
+            intersection.tiles[0] = getTile(i, j, 1, 1, 1, 2, 3, i + 1, j + 1);
+            intersection.tiles[1] = getTile(i, j, -1, 1, 0, 3, 2, i, j + 1);
+            intersection.tiles[2] = getTile(i, j, -1, -1, 3, 0, 1, i, j);
+            intersection.tiles[3] = getTile(i, j, 1, -1, 2, 1, 0, i + 1, j);
 
             for (int k = 0; k < 4; ++k) {
                 assert(intersection.tiles[k]->intersections[k] == nullptr);

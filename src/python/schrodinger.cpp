@@ -78,7 +78,6 @@ PYBIND11_MODULE(schrodinger, m) {
                     };
                     r.append(t);
                 }
-                std::cout << "Python list: " << r.size() << std::endl;
                 return r;
             });
 }
