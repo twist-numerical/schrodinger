@@ -59,15 +59,21 @@ PYBIND11_MODULE(schrodinger, m) {
             .def(py::init(
                          [](const std::function<double(double, double)> &V, const Domain<double, 2> &domain,
                             const std::array<int, 2> &gridSize, int maxBasisSize) {
+                             py::gil_scoped_release release;
                              return std::make_shared<Schrodinger2D<double>>(V, domain, (Options) {
                                      .gridSize = {.x = gridSize[0], .y=gridSize[1]},
                                      .maxBasisSize=maxBasisSize,
                              });
                          }), py::arg("V"), py::arg("domain"), py::arg("gridSize") = std::array<int, 2>{21, 21},
                  py::arg("maxBasisSize") = 16)
-            .def("eigenvalues", &Schrodinger2D<double>::eigenvalues)
-            .def("eigenfunctions", [](std::shared_ptr<const Schrodinger2D<double>> s) {
-                std::vector<std::pair<double, std::unique_ptr<Schrodinger2D<double>::Eigenfunction>>> eigs = s->eigenfunctions();
+            .def("eigenvalues", [](std::shared_ptr<const Schrodinger2D<double>> s, int eigenvalueCount) {
+                py::gil_scoped_release release;
+                return s->eigenvalues(eigenvalueCount);
+            }, py::arg("eigenvalueCount") = -1)
+            .def("eigenfunctions", [](std::shared_ptr<const Schrodinger2D<double>> s, int eigenvalueCount) {
+                py::gil_scoped_release release;
+                std::vector<std::pair<double, std::unique_ptr<Schrodinger2D<double>::Eigenfunction>>> eigs
+                        = s->eigenfunctions(eigenvalueCount);
                 py::list r;
                 for (auto &ef: eigs) {
                     py::tuple t(2);
@@ -79,5 +85,5 @@ PYBIND11_MODULE(schrodinger, m) {
                     r.append(t);
                 }
                 return r;
-            });
+            }, py::arg("eigenvalueCount") = -1);
 }

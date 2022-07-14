@@ -21,7 +21,9 @@ TEST_CASE("Zero potential on a disc", "[zero][disc]") {
                                     .maxBasisSize=20
                             });
 
-    checkEigenvalues<double>(expected_on_disc, s.eigenvalues(), 1);
+    std::vector<double> eigenvalues = s.eigenvalues(10);
+    REQUIRE(eigenvalues.size() == 10);
+    checkEigenvalues<double>(expected_on_disc, eigenvalues, 1);
 }
 
 TEST_CASE("Zero potential eigenfunction", "[zero]") {
@@ -60,5 +62,5 @@ TEST_CASE("Zero potential eigenfunction", "[zero]") {
         expected.emplace_back(sij.first, functions);
     }
 
-    checkEigenpairs<double>(domain, expected, eigenfunctions, 1e-3);
+     checkEigenpairs<double>(domain, expected, eigenfunctions, 1e-3);
 }

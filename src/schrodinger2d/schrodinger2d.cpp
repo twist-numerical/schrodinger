@@ -237,8 +237,7 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>>
-eigenpairs(const Schrodinger2D<Scalar> *self) {
-    using ArrayXs = typename Schrodinger2D<Scalar>::ArrayXs;
+eigenpairs(const Schrodinger2D<Scalar> *self, int eigenvalueCount) {
     using MatrixXs = typename Schrodinger2D<Scalar>::MatrixXs;
     using VectorXs = typename Schrodinger2D<Scalar>::VectorXs;
     size_t rows = self->intersections.size();
@@ -279,6 +278,7 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
 
     MatrixXs crossingsMatch(rows, colsX + colsY);
     crossingsMatch << beta_x, -beta_y;
+
     MatrixXs kernel = schrodinger::internal::rightKernel<MatrixXs>(crossingsMatch, 1e-6);
 
     MatrixXs A(rows, colsX + colsY); // rows x (colsX + colsY)
@@ -290,44 +290,54 @@ eigenpairs(const Schrodinger2D<Scalar> *self) {
 
     RectangularPencil<withEigenfunctions, MatrixXs> pencil(A * kernel, BK, self->options.pencilThreshold);
 
+    const auto &values = pencil.eigenvalues();
+    if (eigenvalueCount < 0 || eigenvalueCount > values.size())
+        eigenvalueCount = values.size();
+
+    std::vector<int> indices(values.size());
+    std::iota(indices.begin(), indices.end(), 0);
+    std::partial_sort(indices.begin(), indices.begin() + eigenvalueCount, indices.end(), [&values](int a, int b) {
+        if (std::abs(values(b).imag()) > 1e-8) return true;
+        if (std::abs(values(a).imag()) > 1e-8) return false;
+        return values(a).real() < values(b).real();
+    });
+    indices.resize(eigenvalueCount);
 
     if constexpr(withEigenfunctions) {
-        const auto &values = pencil.eigenvalues();
         const auto &vectors = pencil.eigenvectors();
 
         typedef std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>> Eigenpair;
         std::vector<Eigenpair> eigenfunctions;
-        eigenfunctions.reserve(values.size());
-        for (Index i = 0; i < values.size(); ++i) {
-            // Normalize eigenfunction
 
+        eigenfunctions.reserve(indices.size());
+        for (int i: indices) {
             VectorXs coeffs = kernel * vectors.col(i).real();
 
             eigenfunctions.emplace_back(
-                    values[i].real(),
-                    std::make_unique<typename Schrodinger2D<Scalar>::Eigenfunction>(self, values[i].real(), coeffs)
+                    values(i).real(),
+                    std::make_unique<typename Schrodinger2D<Scalar>::Eigenfunction>(self, values(i).real(), coeffs)
             );
         }
         return eigenfunctions;
     } else {
-        ArrayXs values = pencil.eigenvalues().array().real();
-        std::sort(values.data(), values.data() + values.size());
-        std::vector<Scalar> eigenvalues(values.size());
-        std::copy(values.data(), values.data() + values.size(), eigenvalues.begin());
+        std::vector<Scalar> eigenvalues;
+        eigenvalues.reserve(indices.size());
+        for (int i: indices)
+            eigenvalues.push_back(values(i).real());
 
         return eigenvalues;
     }
 }
 
 template<typename Scalar>
-std::vector<Scalar> Schrodinger2D<Scalar>::eigenvalues() const {
-    return eigenpairs<Scalar, false>(this);
+std::vector<Scalar> Schrodinger2D<Scalar>::eigenvalues(int eigenvalueCount) const {
+    return eigenpairs<Scalar, false>(this, eigenvalueCount);
 }
 
 template<typename Scalar>
 std::vector<std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>>
-Schrodinger2D<Scalar>::eigenfunctions() const {
-    return eigenpairs<Scalar, true>(this);
+Schrodinger2D<Scalar>::eigenfunctions(int eigenvalueCount) const {
+    return eigenpairs<Scalar, true>(this, eigenvalueCount);
 }
 
 #include "instantiate.h"

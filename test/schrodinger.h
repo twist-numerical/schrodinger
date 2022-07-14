@@ -78,7 +78,7 @@ inline void checkEigenpairs(
 
             ArrayXs x = (zs.transpose() * zs).ldlt().solve(zs.transpose() * v.matrix()).array();
 
-            REQUIRE((zs * x.matrix() - v.matrix()).norm() < 1e-4);
+            REQUIRE((zs * x.matrix() - v.matrix()).norm() < 1e-2);
 
             ++i;
         }
