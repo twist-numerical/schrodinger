@@ -62,5 +62,5 @@ TEST_CASE("Zero potential eigenfunction", "[zero]") {
         expected.emplace_back(sij.first, functions);
     }
 
-     checkEigenpairs<double>(domain, expected, eigenfunctions, 1e-3);
+    checkEigenpairs<double>(domain, expected, eigenfunctions, 1e-3);
 }
