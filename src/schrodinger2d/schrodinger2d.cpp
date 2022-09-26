@@ -235,22 +235,16 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
     }
 }
 
-template<typename Scalar, bool withEigenfunctions>
-std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>>
-eigenpairs(const Schrodinger2D<Scalar> *self, int eigenvalueCount) {
-    using MatrixXs = typename Schrodinger2D<Scalar>::MatrixXs;
-    using VectorXs = typename Schrodinger2D<Scalar>::VectorXs;
-    size_t rows = self->intersections.size();
+template<typename Scalar>
+std::pair<typename Schrodinger2D<Scalar>::MatrixXs, typename Schrodinger2D<Scalar>::MatrixXs>
+Schrodinger2D<Scalar>::Beta() const {
+    size_t rows = intersections.size();
 
-    size_t colsX = self->columns.x;
-    size_t colsY = self->columns.y;
-
-
-    MatrixXs beta_x = MatrixXs::Zero(rows, colsX);
-    MatrixXs beta_y = MatrixXs::Zero(rows, colsY);
+    MatrixXs beta_x = MatrixXs::Zero(rows, columns.x);
+    MatrixXs beta_y = MatrixXs::Zero(rows, columns.y);
 
     size_t row = 0;
-    for (const typename Schrodinger2D<Scalar>::Intersection &intersection: self->intersections) {
+    for (const typename Schrodinger2D<Scalar>::Intersection &intersection: intersections) {
         beta_x.row(row).segment(
                 intersection.thread.x->offset, intersection.thread.x->eigenpairs.size()
         ) = intersection.evaluation.x;
@@ -262,19 +256,43 @@ eigenpairs(const Schrodinger2D<Scalar> *self, int eigenvalueCount) {
     }
     assert(row == rows);
 
-    VectorXs lambda_x(colsX);
-    VectorXs lambda_y(colsY);
+    return {beta_x, beta_y};
+}
 
-    for (const auto &x: self->threads.x) {
+template<typename Scalar>
+std::pair<typename Schrodinger2D<Scalar>::VectorXs, typename Schrodinger2D<Scalar>::VectorXs>
+Schrodinger2D<Scalar>::Lambda() const {
+    VectorXs lambda_x(columns.x);
+    VectorXs lambda_y(columns.y);
+
+    for (const auto &x: threads.x) {
         Index offset = x.offset;
         for (auto &ef: x.eigenpairs)
             lambda_x(offset++) = get<0>(ef);
     }
-    for (const auto &y: self->threads.y) {
+    for (const auto &y: threads.y) {
         Index offset = y.offset;
         for (auto &ef: y.eigenpairs)
             lambda_y(offset++) = get<0>(ef);
     }
+
+    return {lambda_x, lambda_y};
+}
+
+
+template<typename Scalar, bool withEigenfunctions>
+std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>>
+eigenpairs(const Schrodinger2D<Scalar> *self, int eigenvalueCount) {
+    using MatrixXs = typename Schrodinger2D<Scalar>::MatrixXs;
+    using VectorXs = typename Schrodinger2D<Scalar>::VectorXs;
+
+    Eigen::Index rows = self->intersections.size();
+    Eigen::Index colsX = self->columns.x;
+    Eigen::Index colsY = self->columns.y;
+    MatrixXs beta_x, beta_y;
+    VectorXs lambda_x, lambda_y;
+    std::tie(beta_x, beta_y) = self->Beta();
+    std::tie(lambda_x, lambda_y) = self->Lambda();
 
     MatrixXs crossingsMatch(rows, colsX + colsY);
     crossingsMatch << beta_x, -beta_y;

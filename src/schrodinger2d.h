@@ -81,6 +81,10 @@ namespace schrodinger {
                       const geometry::Domain<Scalar, 2> &_domain,
                       const Options &options = Options());
 
+        std::pair<MatrixXs, MatrixXs> Beta() const;
+
+        std::pair<VectorXs, VectorXs> Lambda() const;
+
         std::vector<Scalar> eigenvalues(int eigenvaluesCount = -1) const;
 
         std::vector<std::pair<Scalar, std::unique_ptr<Eigenfunction>>> eigenfunctions(int eigenvaluesCount = -1) const;

@@ -70,6 +70,8 @@ PYBIND11_MODULE(schrodinger, m) {
                 py::gil_scoped_release release;
                 return s->eigenvalues(eigenvalueCount);
             }, py::arg("eigenvalueCount") = -1)
+            .def("Beta", &Schrodinger2D<double>::Beta)
+            .def("Lambda", &Schrodinger2D<double>::Lambda)
             .def("eigenfunctions", [](std::shared_ptr<const Schrodinger2D<double>> s, int eigenvalueCount) {
                 py::gil_scoped_release release;
                 std::vector<std::pair<double, std::unique_ptr<Schrodinger2D<double>::Eigenfunction>>> eigs
