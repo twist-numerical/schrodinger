@@ -15,7 +15,7 @@ else ()
     add_compile_options(-Wall -Wextra -Werror -Wno-missing-field-initializers)
 endif ()
 
-SET(SCHRODINGER_SRC src/schrodinger2d.cpp)
+SET(SCHRODINGER_SRC src/schrodinger2d/eigenfunction.cpp src/schrodinger2d/schrodinger2d.cpp)
 
 add_library(schrodinger ${SCHRODINGER_SRC})
 
@@ -46,11 +46,13 @@ set(libraries matslise)
 target_link_libraries(schrodinger PUBLIC ${libraries})
 
 add_executable(schrodinger_test
-        test/disc.cpp
+        test/zero.cpp
         test/harmonic.cpp
         test/ixaru.cpp
         test/quartic.cpp
-        test/main.cpp)
+        test/henon_heiles.cpp
+        test/main.cpp
+        )
 
 target_link_libraries(schrodinger_test PRIVATE schrodinger)
 add_dependencies(schrodinger_test schrodinger)

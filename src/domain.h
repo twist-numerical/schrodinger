@@ -73,7 +73,7 @@ namespace schrodinger::geometry {
         std::vector<isocpp_p0201::polymorphic_value<Domain<Scalar, d>>> subdomains;
 
         Union(const std::vector<const Domain<Scalar, d> *> &domains) {
-            for (auto &dom : domains) {
+            for (auto &dom: domains) {
                 subdomains.push_back(isocpp_p0201::polymorphic_value<Domain<Scalar, d>>(
                         static_cast<Domain<Scalar, d> *>(dom->clone()),
                         typename Domain<Scalar, d>::copy{}));
@@ -89,7 +89,7 @@ namespace schrodinger::geometry {
         }
 
         virtual bool contains(const Vector<Scalar, d> &point) const override {
-            for (auto &dom : subdomains)
+            for (auto &dom: subdomains)
                 if (dom->contains(point))
                     return true;
             return false;
@@ -102,8 +102,8 @@ namespace schrodinger::geometry {
                 bool isStart;
             } Point;
             std::vector<Point> points;
-            for (auto &dom : subdomains)
-                for (auto &sec : dom->intersections(ray)) {
+            for (auto &dom: subdomains)
+                for (auto &sec: dom->intersections(ray)) {
                     points.push_back({.point=sec.first, .isStart=true});
                     points.push_back({.point=sec.second, .isStart=false});
                 }
@@ -114,7 +114,7 @@ namespace schrodinger::geometry {
             });
             std::vector<std::pair<Scalar, Scalar>> intersections;
             int nested = 0;
-            for (auto &p : points) {
+            for (auto &p: points) {
                 if (p.isStart) {
                     if (nested++ == 0)
                         intersections.template emplace_back(p.point, 0);
@@ -131,7 +131,7 @@ namespace schrodinger::geometry {
             Scalar max = -std::numeric_limits<Scalar>::infinity();
             Scalar b_min, b_max;
 
-            for (const auto &dom : subdomains) {
+            for (const auto &dom: subdomains) {
                 std::tie(b_min, b_max) = dom->bounds(direction);
                 min = std::min(min, b_min);
                 max = std::max(max, b_max);
@@ -155,6 +155,26 @@ namespace schrodinger::geometry {
         template<typename... T, typename=typename std::enable_if<
                 sizeof...(T) == 2 * d && (std::is_convertible<T, Scalar>::value && ...)>::type>
         constexpr Rectangle(T... bounds) : bounds_({bounds...}) {}
+
+        template<int axis>
+        Scalar &min() {
+            return bounds_[2 * axis];
+        }
+
+        template<int axis>
+        Scalar &max() {
+            return bounds_[2 * axis + 1];
+        }
+
+        template<int axis>
+        const Scalar &min() const {
+            return bounds_[2 * axis];
+        }
+
+        template<int axis>
+        const Scalar &max() const {
+            return bounds_[2 * axis + 1];
+        }
 
         virtual bool contains(const Vector<Scalar, d> &point) const override {
             for (int i = 0; i < d; ++i)
