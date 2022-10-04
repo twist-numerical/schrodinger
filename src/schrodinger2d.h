@@ -20,6 +20,7 @@ namespace schrodinger {
         PerDirection<int> gridSize = {.x=11, .y=11};
         int maxBasisSize = 22;
         double pencilThreshold = 1e-8;
+        bool sparse = false;
     };
 
     template<typename Scalar>
@@ -32,6 +33,7 @@ namespace schrodinger {
         typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> ArrayXs;
         typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXs;
         typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorXs;
+        typedef Eigen::SparseMatrix<Scalar, Eigen::RowMajor> SparseBeta;
 
         struct Thread {
             Scalar value;
@@ -82,6 +84,8 @@ namespace schrodinger {
                       const Options &options = Options());
 
         std::pair<MatrixXs, MatrixXs> Beta() const;
+
+        std::tuple<SparseBeta, SparseBeta, SparseBeta> sparseBeta() const;
 
         std::pair<VectorXs, VectorXs> Lambda() const;
 

@@ -260,6 +260,53 @@ Schrodinger2D<Scalar>::Beta() const {
 }
 
 template<typename Scalar>
+std::tuple<
+        typename Schrodinger2D<Scalar>::SparseBeta,
+        typename Schrodinger2D<Scalar>::SparseBeta,
+        typename Schrodinger2D<Scalar>::SparseBeta>
+Schrodinger2D<Scalar>::sparseBeta() const {
+    Eigen::Index rows = intersections.size();
+
+    SparseBeta beta_x(rows, columns.x);
+    SparseBeta beta_y(rows, columns.y);
+    SparseBeta beta(rows, columns.x + columns.y);
+
+    VectorXi sizes_x(rows);
+    VectorXi sizes_y(rows);
+
+    Eigen::Index row;
+
+    row = 0;
+    for (const typename Schrodinger2D<Scalar>::Intersection &intersection: intersections) {
+        sizes_x[row] = intersection.thread.x->eigenpairs.size();
+        sizes_y[row] = intersection.thread.y->eigenpairs.size();
+        ++row;
+    }
+    assert(row == rows);
+    beta_x.reserve(sizes_x);
+    beta_y.reserve(sizes_y);
+    beta.reserve(sizes_x + sizes_y);
+
+    row = 0;
+    for (const typename Schrodinger2D<Scalar>::Intersection &intersection: intersections) {
+        for (Eigen::Index k = 0; k < (Eigen::Index) intersection.thread.x->eigenpairs.size(); ++k) {
+            beta_x.insert(row, intersection.thread.x->offset + k) = intersection.evaluation.x[k];
+            beta.insert(row, intersection.thread.x->offset + k) = intersection.evaluation.x[k];
+        }
+
+        for (Eigen::Index k = 0; k < (Eigen::Index) intersection.thread.y->eigenpairs.size(); ++k) {
+            beta_y.insert(row, intersection.thread.y->offset + k) = intersection.evaluation.y[k];
+            beta.insert(row, columns.x + intersection.thread.y->offset + k) = -intersection.evaluation.y[k];
+        }
+
+        ++row;
+    }
+    assert(row == rows);
+
+    return {beta_x, beta_y, beta};
+}
+
+template<typename Scalar>
 std::pair<typename Schrodinger2D<Scalar>::VectorXs, typename Schrodinger2D<Scalar>::VectorXs>
 Schrodinger2D<Scalar>::Lambda() const {
     VectorXs lambda_x(columns.x);
@@ -285,28 +332,47 @@ std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, st
 eigenpairs(const Schrodinger2D<Scalar> *self, int eigenvalueCount) {
     using MatrixXs = typename Schrodinger2D<Scalar>::MatrixXs;
     using VectorXs = typename Schrodinger2D<Scalar>::VectorXs;
+    using SparseBeta = typename Schrodinger2D<Scalar>::SparseBeta;
 
     Eigen::Index rows = self->intersections.size();
     Eigen::Index colsX = self->columns.x;
     Eigen::Index colsY = self->columns.y;
-    MatrixXs beta_x, beta_y;
     VectorXs lambda_x, lambda_y;
-    std::tie(beta_x, beta_y) = self->Beta();
     std::tie(lambda_x, lambda_y) = self->Lambda();
 
-    MatrixXs crossingsMatch(rows, colsX + colsY);
-    crossingsMatch << beta_x, -beta_y;
+    MatrixXs kernel, A, BK;
+    if (self->options.sparse) {
+        SparseBeta beta_x, beta_y, beta;
+        std::tie(beta_x, beta_y, beta) = self->sparseBeta();
+        beta.makeCompressed();
+        kernel = schrodinger::internal::sparseRightKernel<Scalar>(beta, 1e-6);
+        std::cout << "Sparse: " << (beta * kernel).cwiseAbs().rowwise().sum().maxCoeff() << std::endl;
 
-    MatrixXs kernel = schrodinger::internal::rightKernel<MatrixXs>(crossingsMatch, 1e-6);
+        A = beta_x * lambda_x.asDiagonal() * kernel.topRows(colsX) +
+            beta_y * lambda_y.asDiagonal() * kernel.bottomRows(colsY);
 
-    MatrixXs A(rows, colsX + colsY); // rows x (colsX + colsY)
-    A << beta_x * lambda_x.asDiagonal(), beta_y * lambda_y.asDiagonal();
+        BK = colsY < colsX // rows x kernelSize
+             ? beta_y * kernel.bottomRows(colsY)
+             : beta_x * kernel.topRows(colsX);
+    } else {
+        MatrixXs beta_x, beta_y;
+        std::tie(beta_x, beta_y) = self->Beta();
 
-    MatrixXs BK = colsY < colsX // rows x kernelSize
-                  ? beta_y * kernel.bottomRows(colsY)
-                  : beta_x * kernel.topRows(colsX);
+        MatrixXs crossingsMatch(rows, colsX + colsY);
+        crossingsMatch << beta_x, -beta_y;
 
-    RectangularPencil<withEigenfunctions, MatrixXs> pencil(A * kernel, BK, self->options.pencilThreshold);
+        kernel = schrodinger::internal::rightKernel<MatrixXs>(crossingsMatch, 1e-6);
+        std::cout << "Dense: " << (crossingsMatch * kernel).cwiseAbs().rowwise().sum().maxCoeff() << std::endl;
+
+        A = beta_x * lambda_x.asDiagonal() * kernel.topRows(colsX) +
+            beta_y * lambda_y.asDiagonal() * kernel.bottomRows(colsY);
+
+        BK = colsY < colsX // rows x kernelSize
+             ? beta_y * kernel.bottomRows(colsY)
+             : beta_x * kernel.topRows(colsX);
+    }
+
+    RectangularPencil<withEigenfunctions, MatrixXs> pencil(A, BK, self->options.pencilThreshold);
 
     const auto &values = pencil.eigenvalues();
     if (eigenvalueCount < 0 || eigenvalueCount > values.size())

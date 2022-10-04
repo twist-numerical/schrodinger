@@ -8,50 +8,39 @@ using namespace Eigen;
 using namespace schrodinger;
 using namespace schrodinger::geometry;
 
-TEST_CASE("Henon Heiles", "[henonheiles][slow]") {
-    // int n = 20;
-    // int N = 10;
+std::vector<double> referenceHenonHeiles{
+        2 * 0.998594690530479, 2 * 1.99007660445524, 2 * 1.99007660445524, 2 * 2.95624333869018,
+        2 * 2.98532593386986, 2 * 2.98532593386986, 2 * 3.92596412795287, 2 * 3.92596412795287,
+        2 * 3.98241882458866, 2 * 3.98575763690663, 2 * 4.87014557482289, 2 * 4.89864497284387, 2 * 4.89864497284387
+};
 
-
+TEST_CASE("Henon Heiles", "[henonheiles]") {
     int n = 30;
     int N = 15;
     Schrodinger2D<double> s(
             [](double x, double y) { return x * x + y * y + sqrt(5) / 10 * (x * y * y - x * x * x / 3); },
             Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
-            //Schrodinger2D<double> s([](double x, double y) { return (1+x*x)*(1+y*y); },
-            //                        Rectangle<double, 2>{-5.5, 5.5, -5.5, 5.5},
             Options{
                     .gridSize={.x=n, .y=n},
                     .maxBasisSize=N,
             });
 
+    checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(), 1e-4);
+}
 
+TEST_CASE("Sparse Henon Heiles", "[henonheiles][sparse]") {
+    int n = 30;
+    int N = 15;
+    Schrodinger2D<double> s(
+            [](double x, double y) { return x * x + y * y + sqrt(5) / 10 * (x * y * y - x * x * x / 3); },
+            Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
+            Options{
+                    .gridSize={.x=n, .y=n},
+                    .maxBasisSize=N,
+                    .sparse=true
+            });
 
-    // Ixaru reference eigenvalues
-    std::vector<double> E_ref{
-            2 * 0.998594690530479, 2 * 1.99007660445524, 2 * 1.99007660445524, 2 * 2.95624333869018,
-            2 * 2.98532593386986, 2 * 2.98532593386986, 2 * 3.92596412795287, 2 * 3.92596412795287,
-            2 * 3.98241882458866, 2 * 3.98575763690663, 2 * 4.87014557482289, 2 * 4.89864497284387, 2 * 4.89864497284387
-    };
-
-    checkEigenvalues<double>(E_ref, s.eigenvalues(), 1e-4);
-
-    /*
-    auto eigenfunctions = s.eigenfunctions();
-    // Sort eigenfunctions
-    std::sort(eigenfunctions.begin(), eigenfunctions.end(), [](auto a, auto b) { return a.first < b.first; });
-    printf("Num eigenvalues: %d\n", (int) eigenfunctions.size());
-    int eig_index = 0;
-    for (auto &eigenfunction: eigenfunctions) {
-        double E = eigenfunction.first;
-        Schrodinger2D<double>::Eigenfunction phi = eigenfunction.second;
-
-        if (eig_index < 13 && std::abs(E - E_ref[eig_index]) < 1)
-            printf("Eigenvalue: %f, error %g\n", E, std::abs(E - E_ref[eig_index++]));
-        else
-            printf("Eigenvalue: %f\n", E);
-    }
-     */
+    checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(), 1e-4);
 }
 
 /*

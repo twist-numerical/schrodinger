@@ -45,6 +45,8 @@ namespace schrodinger::internal {
             if (std::abs(qr(i, i)) < threshold)
                 ++count;
 
+        std::cout << "dense: " << count << ", " << diag << std::endl;
+
         KernelType K(cols, count);
         Eigen::Index j = 0;
         for (Eigen::Index i = 0; i < cols; ++i)
@@ -76,32 +78,37 @@ namespace schrodinger::internal {
 
     template<typename Scalar>
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
-    rightKernel(const Eigen::SparseMatrix<Scalar, Eigen::RowMajor> &A, const Scalar &threshold) {
+    sparseRightKernel(const Eigen::SparseMatrix<Scalar, Eigen::RowMajor> &A, Scalar threshold = -1) {
         // Householder method
         Eigen::Index rows = A.rows();
         Eigen::Index cols = A.cols();
 
-        Eigen::SparseQR<Eigen::SparseMatrix<Scalar, Eigen::ColMajor>, Eigen::COLAMDOrdering<int>> QR(A.transpose());
-
-        const Eigen::Index diag = std::min(rows, cols);
-
+        Eigen::Index diag = std::min(rows, cols);
         if (threshold < 0)
             threshold = Scalar(diag) * Eigen::NumTraits<Scalar>::epsilon();
 
-        Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Rdiag = Eigen::SparseMatrix<double, Eigen::RowMajor>(
-                QR.matrixR()).diagonal();
-        typename decltype(QR)::HouseholderSequenceType householder = QR.householderQ().setLength(QR.nonzeroPivots());
+        Eigen::SparseQR<
+                Eigen::SparseMatrix<Scalar, Eigen::ColMajor>,
+                Eigen::COLAMDOrdering<typename Eigen::SparseMatrix<Scalar, Eigen::RowMajor>::StorageIndex>> QR;
+        QR.setPivotThreshold(threshold * 10);
+        QR.compute(A.transpose());
+
+
+        Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Rdiag = QR.matrixR().diagonal();
 
         Eigen::Index count = cols - diag;
         for (Eigen::Index i = 0; i < diag; ++i)
             if (std::abs(Rdiag(i)) < threshold)
                 ++count;
 
+        std::cout << "sparse: " << count << ", " << Rdiag.size() << std::endl;
+
         Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> K(cols, count);
         Eigen::Index j = 0;
         for (Eigen::Index i = 0; i < cols; ++i)
             if (diag <= i || std::abs(Rdiag(i)) < threshold)
-                K.col(j++) = householder * Eigen::Matrix<Scalar, Eigen::Dynamic, 1>::Unit(cols, i);
+                K.col(j++) = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>(
+                        QR.matrixQ() * Eigen::Matrix<Scalar, Eigen::Dynamic, 1>::Unit(cols, i));
 
         assert(j == count);
 
