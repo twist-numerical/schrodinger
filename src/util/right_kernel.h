@@ -45,7 +45,7 @@ namespace schrodinger::internal {
             if (std::abs(qr(i, i)) < threshold)
                 ++count;
 
-        std::cout << "dense: " << count << ", " << diag << std::endl;
+        // std::cout << "dense: " << count << ", " << diag << std::endl;
 
         KernelType K(cols, count);
         Eigen::Index j = 0;
@@ -101,7 +101,7 @@ namespace schrodinger::internal {
             if (std::abs(Rdiag(i)) < threshold)
                 ++count;
 
-        std::cout << "sparse: " << count << ", " << Rdiag.size() << std::endl;
+        // std::cout << "sparse: " << count << ", " << Rdiag.size() << std::endl;
 
         Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> K(cols, count);
         Eigen::Index j = 0;
