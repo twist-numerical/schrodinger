@@ -28,6 +28,7 @@ TEST_CASE("Henon Heiles", "[henonheiles]") {
     checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(), 1e-4);
 }
 
+/*
 TEST_CASE("Sparse Henon Heiles", "[henonheiles][sparse]") {
     int n = 30;
     int N = 15;
@@ -42,6 +43,7 @@ TEST_CASE("Sparse Henon Heiles", "[henonheiles][sparse]") {
 
     checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(), 1e-4);
 }
+*/
 
 /*
 TEST_CASE("test_pencil", "") {

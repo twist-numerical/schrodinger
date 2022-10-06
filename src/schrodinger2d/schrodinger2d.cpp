@@ -346,7 +346,7 @@ eigenpairs(const Schrodinger2D<Scalar> *self, int eigenvalueCount) {
         std::tie(beta_x, beta_y, beta) = self->sparseBeta();
         beta.makeCompressed();
         kernel = schrodinger::internal::sparseRightKernel<Scalar>(beta, 1e-6);
-        std::cout << "Sparse: " << (beta * kernel).cwiseAbs().rowwise().sum().maxCoeff() << std::endl;
+        // std::cout << "Sparse: " << (beta * kernel).cwiseAbs().rowwise().sum().maxCoeff() << std::endl;
 
         A = beta_x * lambda_x.asDiagonal() * kernel.topRows(colsX) +
             beta_y * lambda_y.asDiagonal() * kernel.bottomRows(colsY);
@@ -362,7 +362,7 @@ eigenpairs(const Schrodinger2D<Scalar> *self, int eigenvalueCount) {
         crossingsMatch << beta_x, -beta_y;
 
         kernel = schrodinger::internal::rightKernel<MatrixXs>(crossingsMatch, 1e-6);
-        std::cout << "Dense: " << (crossingsMatch * kernel).cwiseAbs().rowwise().sum().maxCoeff() << std::endl;
+        // std::cout << "Dense: " << (crossingsMatch * kernel).cwiseAbs().rowwise().sum().maxCoeff() << std::endl;
 
         A = beta_x * lambda_x.asDiagonal() * kernel.topRows(colsX) +
             beta_y * lambda_y.asDiagonal() * kernel.bottomRows(colsY);
