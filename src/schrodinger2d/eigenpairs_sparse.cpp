@@ -1,5 +1,10 @@
 #include "eigenpairs.h"
 #include <Eigen/Sparse>
+#include <Spectra/GenEigsSolver.h>
+#include <Spectra/GenEigsRealShiftSolver.h>
+#include <Spectra/MatOp/SparseGenMatProd.h>
+#include <Spectra/MatOp/SparseGenRealShiftSolve.h>
+#include <algorithm>
 
 using namespace schrodinger;
 
@@ -25,6 +30,7 @@ public:
     Eigen::PermutationMatrix<Eigen::Dynamic> permutation;
     std::vector<MatrixXs> leastSquares;
     std::vector<MatrixXs> blocks;
+    std::vector<MatrixXs> fullBlocks;
     Eigen::Index rows = 0;
     Eigen::Index cols = 0;
 
@@ -32,11 +38,12 @@ public:
             Eigen::Index(schrodinger->intersections.size())} {
         auto &threads = direction(schrodinger->threads);
         leastSquares.reserve(threads.size());
+        fullBlocks.reserve(threads.size());
         blocks.reserve(threads.size());
         Eigen::Index pIndex = 0;
         for (auto &thread: threads) {
             for (auto intersection: thread.intersections)
-                permutation.indices()(pIndex++) = intersection->index;
+                permutation.indices()(intersection->index) = pIndex++;
 
             Eigen::Index m = thread.intersections.size();
             Eigen::Index n = thread.eigenpairs.size();
@@ -56,7 +63,8 @@ public:
             }
 
             leastSquares.push_back(B.colPivHouseholderQr().solve(MatrixXs::Identity(m, m)));
-            blocks.push_back(B * lambda.asDiagonal() * leastSquares.back());
+            fullBlocks.push_back(B * lambda.asDiagonal() * leastSquares.back());
+            blocks.push_back(B);
         }
     }
 
@@ -82,11 +90,36 @@ public:
                 j += lstsq.cols();
             }
         }
-        return permutation.transpose() * r * permutation;
+        return r * permutation;
     }
 
     SparseMatrix fullMatrix() {
         SparseMatrix r{rows, rows};
+        Eigen::VectorXi toReserve{rows};
+        {
+            Eigen::Index i = 0;
+            for (auto &block: fullBlocks) {
+                toReserve.middleRows(i, block.rows()) = Eigen::VectorXi::Constant(block.rows(), block.cols());
+                i += block.rows();
+            }
+        }
+        r.reserve(toReserve);
+        {
+            Eigen::Index i = 0;
+            Eigen::Index j = 0;
+            for (auto &block: fullBlocks) {
+                for (int i1 = 0; i1 < block.rows(); ++i1)
+                    for (int j1 = 0; j1 < block.cols(); ++j1)
+                        r.insert(i + i1, j + j1) = block(i1, j1);
+                i += block.rows();
+                j += block.cols();
+            }
+        }
+        return permutation.transpose() * r * permutation;
+    }
+
+    SparseMatrix asMatrix() {
+        SparseMatrix r{rows, cols};
         Eigen::VectorXi toReserve{rows};
         {
             Eigen::Index i = 0;
@@ -107,7 +140,7 @@ public:
                 j += block.cols();
             }
         }
-        return permutation.transpose() * r * permutation;
+        return permutation.transpose() * r;
     }
 };
 
@@ -120,33 +153,46 @@ sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, int) {
 
     PermutedBeta<Scalar> Bx{schrodinger, xDirection};
     PermutedBeta<Scalar> By{schrodinger, yDirection};
-    Eigen::EigenSolver<MatrixXs> eigenSolver;
-    eigenSolver.compute(MatrixXs(Bx.fullMatrix() + By.fullMatrix()), true);
+
+    Eigen::Index n = schrodinger->intersections.size();
+    Eigen::Index nev = n - 2;
+    Spectra::SparseGenMatProd<Scalar, Eigen::RowMajor> op(Bx.fullMatrix() + By.fullMatrix());
+    Spectra::GenEigsSolver<decltype(op)> eigenSolver(op, nev, std::min(2 * nev + 1, n));
+    eigenSolver.init();
+    Eigen::Index nconv = eigenSolver.compute();
 
     Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, 1> values = eigenSolver.eigenvalues();
     Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, Eigen::Dynamic> vectors = eigenSolver.eigenvectors();
     SparseMatrix lstsq_x = Bx.lstsqMatrix();
     SparseMatrix lstsq_y = By.lstsqMatrix();
-    VectorXs norms = (lstsq_x * vectors - lstsq_y * vectors).colwise().norm();
+    MatrixXs vx = lstsq_x * vectors.real();
+    MatrixXs vy = lstsq_y * vectors.real();
+    VectorXs norms = (Bx.asMatrix() * vx - By.asMatrix() * vy).colwise().norm();
+    VectorXs norm2s = (Bx.asMatrix() * vx + By.asMatrix() * vy).colwise().norm();
 
     std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>> result;
     for (Eigen::Index i = 0; i < values.size(); ++i) {
-        if (std::abs(values(i).imag()) < 1e-8 && norms(i) < 1e-8) {
-            if constexpr(withEigenfunctions) {
+        if (std::abs(values(i).imag()) < 1e-4 && norms(i) < 1e-1 && norm2s(i) > 1e-2) {
+            if constexpr (withEigenfunctions) {
                 VectorXs v(Bx.cols + By.cols);
-                v.topRows(Bx.cols) = lstsq_x * vectors.col(i).real();
-                v.bottomRows(By.cols) = lstsq_y * vectors.col(i).real();
+                v.topRows(Bx.cols) = vx.col(i);
+                v.bottomRows(By.cols) = vy.col(i);
                 result.emplace_back(
                         values(i).real(),
                         std::make_unique<typename Schrodinger2D<Scalar>::Eigenfunction>(
                                 schrodinger, values(i).real(), v)
                 );
             } else {
-                std::cout << values(i).real() << std::endl;
                 result.emplace_back(values(i).real());
             }
         }
     }
+    std::sort(result.begin(), result.end(), [](auto &a, auto &b) {
+        if constexpr (withEigenfunctions)
+            return a.first < b.first;
+        else
+            return a < b;
+    });
     return result;
 }
 

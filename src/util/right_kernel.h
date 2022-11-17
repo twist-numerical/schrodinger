@@ -76,9 +76,11 @@ namespace schrodinger::internal {
 */
     }
 
+#ifdef SCHRODINGER_SLEPC
     template<typename Scalar>
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
     sparseRightKernel(const Eigen::SparseMatrix<Scalar, Eigen::RowMajor> &eigenA, Scalar threshold = -1);
+#endif
 }
 
 #endif //SCHRODINGER2D_RIGHT_KERNEL_H

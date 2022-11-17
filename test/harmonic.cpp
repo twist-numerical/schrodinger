@@ -5,7 +5,7 @@ using namespace schrodinger;
 using namespace schrodinger::geometry;
 
 const std::vector<double> expected{
-        2, 4, 4, 6, 6, 6, 8, 8, 8, 8, 10, 10, 10, 10, 10
+        2, 4, 4, 6, 6, 6, 8, 8, 8, 8, 10, 10, 10, 10, 10, 12, 12, 12, 12, 12, 12
 };
 
 TEST_CASE("Harmonic potential", "[harmonic]") {
@@ -19,11 +19,11 @@ TEST_CASE("Harmonic potential", "[harmonic]") {
     checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
 }
 
-TEST_CASE("sparse harmonic potential", "[harmonic][sparse]") {
+TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
     Schrodinger2D<double> s([](double x, double y) { return x * x + y * y; },
                             Rectangle<double, 2>{-8.0, 8.0, -8.0, 8.0},
                             Options{
-                                    .gridSize={.x=41, .y=41},
+                                    .gridSize={.x=48, .y=48},
                                     .maxBasisSize=20,
                                     .sparse=true
                             });
