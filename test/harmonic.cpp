@@ -12,8 +12,20 @@ TEST_CASE("Harmonic potential", "[harmonic]") {
     Schrodinger2D<double> s([](double x, double y) { return x * x + y * y; },
                             Rectangle<double, 2>{-8.0, 8.0, -8.0, 8.0},
                             Options{
-                                    .gridSize={.x=26, .y=26},
-                                    .maxBasisSize=14
+                                    .gridSize={.x=48, .y=48},
+                                    .maxBasisSize=20
+                            });
+
+    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
+}
+
+TEST_CASE("sparse harmonic potential", "[harmonic][sparse]") {
+    Schrodinger2D<double> s([](double x, double y) { return x * x + y * y; },
+                            Rectangle<double, 2>{-8.0, 8.0, -8.0, 8.0},
+                            Options{
+                                    .gridSize={.x=41, .y=41},
+                                    .maxBasisSize=20,
+                                    .sparse=true
                             });
 
     checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);

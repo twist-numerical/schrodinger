@@ -12,6 +12,14 @@ namespace py = pybind11;
 using namespace schrodinger;
 using namespace schrodinger::geometry;
 
+
+template<typename T>
+void perDirection(const py::handle &scope, const std::string &name) {
+    py::class_<PerDirection<T>>(scope, name)
+            .def("x", &PerDirection<T>::x)
+            .def("y", &PerDirection<T>::y);
+}
+
 PYBIND11_MODULE(schrodinger, m) {
 
     struct KeepAliveEigenfunction {
@@ -54,6 +62,9 @@ PYBIND11_MODULE(schrodinger, m) {
                                 Schrodinger2D<double>::ArrayXs ys) {
                 return (*f.eigenfunction)(xs, ys);
             });
+
+    perDirection<Schrodinger2D<double>::MatrixXs>(m, "PerDirectionMatrixXs");
+    perDirection<Schrodinger2D<double>::VectorXs>(m, "PerDirectionVectorXs");
 
     py::class_<Schrodinger2D<double>, std::shared_ptr<Schrodinger2D<double>>>(m, "Schrodinger2D")
             .def(py::init(

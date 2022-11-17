@@ -33,7 +33,8 @@ namespace schrodinger {
         typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> ArrayXs;
         typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXs;
         typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorXs;
-        typedef Eigen::SparseMatrix<Scalar, Eigen::RowMajor> SparseBeta;
+
+        struct Intersection;
 
         struct Thread {
             Scalar value;
@@ -43,6 +44,7 @@ namespace schrodinger {
             Eigen::Index gridLength;
             std::unique_ptr<matslise::Matslise<Scalar>> matslise;
             std::vector<std::pair<Scalar, std::unique_ptr<typename matslise::Matslise<Scalar>::Eigenfunction>>> eigenpairs;
+            std::vector<Intersection *> intersections;
         };
 
         struct Tile;
@@ -83,11 +85,9 @@ namespace schrodinger {
                       const geometry::Domain<Scalar, 2> &_domain,
                       const Options &options = Options());
 
-        std::pair<MatrixXs, MatrixXs> Beta() const;
+        PerDirection<MatrixXs> Beta() const;
 
-        std::tuple<SparseBeta, SparseBeta, SparseBeta> sparseBeta() const;
-
-        std::pair<VectorXs, VectorXs> Lambda() const;
+        PerDirection<VectorXs> Lambda() const;
 
         std::vector<Scalar> eigenvalues(int eigenvaluesCount = -1) const;
 

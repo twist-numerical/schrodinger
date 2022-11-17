@@ -1,7 +1,3 @@
-//
-// Created by Django on 003 03/12/2021.
-//
-
 #include "schrodinger.h"
 
 using namespace Eigen;
@@ -28,10 +24,10 @@ TEST_CASE("Henon Heiles", "[henonheiles]") {
     checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(), 1e-4);
 }
 
-/*
+
 TEST_CASE("Sparse Henon Heiles", "[henonheiles][sparse]") {
     int n = 30;
-    int N = 15;
+    int N = 14;
     Schrodinger2D<double> s(
             [](double x, double y) { return x * x + y * y + sqrt(5) / 10 * (x * y * y - x * x * x / 3); },
             Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
@@ -43,7 +39,7 @@ TEST_CASE("Sparse Henon Heiles", "[henonheiles][sparse]") {
 
     checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(), 1e-4);
 }
-*/
+
 
 /*
 TEST_CASE("test_pencil", "") {

@@ -78,61 +78,7 @@ namespace schrodinger::internal {
 
     template<typename Scalar>
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
-    sparseRightKernel(const Eigen::SparseMatrix<Scalar, Eigen::RowMajor> &A, Scalar threshold = -1) {
-        // Householder method
-        Eigen::Index rows = A.rows();
-        Eigen::Index cols = A.cols();
-
-        Eigen::Index diag = std::min(rows, cols);
-        if (threshold < 0)
-            threshold = Scalar(diag) * Eigen::NumTraits<Scalar>::epsilon();
-
-        Eigen::SparseQR<
-                Eigen::SparseMatrix<Scalar, Eigen::ColMajor>,
-                Eigen::COLAMDOrdering<typename Eigen::SparseMatrix<Scalar, Eigen::RowMajor>::StorageIndex>> QR;
-        QR.setPivotThreshold(threshold * 10);
-        QR.compute(A.transpose());
-
-
-        Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Rdiag = QR.matrixR().diagonal();
-
-        Eigen::Index count = cols - diag;
-        for (Eigen::Index i = 0; i < diag; ++i)
-            if (std::abs(Rdiag(i)) < threshold)
-                ++count;
-
-        // std::cout << "sparse: " << count << ", " << Rdiag.size() << std::endl;
-
-        Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> K(cols, count);
-        Eigen::Index j = 0;
-        for (Eigen::Index i = 0; i < cols; ++i)
-            if (diag <= i || std::abs(Rdiag(i)) < threshold)
-                K.col(j++) = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>(
-                        QR.matrixQ() * Eigen::Matrix<Scalar, Eigen::Dynamic, 1>::Unit(cols, i));
-
-        assert(j == count);
-
-        return K;
-
-
-/*
-        // SVD method
-        // typedef typename Eigen::MatrixBase<Derived> MatrixType;
-        int rows = A.rows();
-        int cols = A.cols();
-
-        Eigen::BDCSVD<Derived> svd;
-        svd.setThreshold(threshold);
-        svd.compute(A, Eigen::ComputeFullV);
-
-        int rank = svd.rank();
-        // rank = 1700;
-        int kernelSize = cols - rank;
-        printf("Matrix A: %dx%d, rank: %d, kernel: %d\n", rows, cols, rank, kernelSize);
-        return svd.matrixV().rightCols(kernelSize);
-*/
-    }
-
+    sparseRightKernel(const Eigen::SparseMatrix<Scalar, Eigen::RowMajor> &eigenA, Scalar threshold = -1);
 }
 
 #endif //SCHRODINGER2D_RIGHT_KERNEL_H

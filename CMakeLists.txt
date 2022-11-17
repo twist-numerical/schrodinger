@@ -15,7 +15,7 @@ else ()
     add_compile_options(-Wall -Wextra -Werror -Wno-missing-field-initializers)
 endif ()
 
-SET(SCHRODINGER_SRC src/schrodinger2d/eigenfunction.cpp src/schrodinger2d/schrodinger2d.cpp)
+SET(SCHRODINGER_SRC src/schrodinger2d/eigenfunction.cpp src/schrodinger2d/schrodinger2d.cpp src/util/right_kernel.cpp src/schrodinger2d/eigenpairs_dense.cpp src/schrodinger2d/eigenpairs_sparse.cpp)
 
 add_library(schrodinger ${SCHRODINGER_SRC})
 
@@ -35,13 +35,21 @@ else ()
     message("-- without support for long double")
 endif ()
 
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+set(ENV{PKG_CONFIG_PATH} "$ENV{SLEPC_DIR}/$ENV{PETSC_ARCH}/lib/pkgconfig:$ENV{SLEPC_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+set(ENV{PKG_CONFIG_PATH} "$ENV{PETSC_DIR}/$ENV{PETSC_ARCH}/lib/pkgconfig:$ENV{PETSC_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+set(ENV{PKG_CONFIG_PATH} "$ENV{PETSC_DIR}/$ENV{PETSC_ARCH}:$ENV{PETSC_DIR}:$ENV{PKG_CONFIG_PATH}")
+find_package(PkgConfig REQUIRED)
+pkg_search_module(SLEPC REQUIRED IMPORTED_TARGET slepc)
+message("-- slepc-version: ${SLEPC_VERSION}")
+
 add_subdirectory(lib/matslise)
 include_directories(lib/matslise)
 set_property(TARGET matslise PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 message("Schrodinger")
 
-set(libraries matslise)
+set(libraries matslise PkgConfig::SLEPC)
 
 target_link_libraries(schrodinger PUBLIC ${libraries})
 
