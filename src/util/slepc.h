@@ -4,18 +4,20 @@
 #include <slepcsvd.h>
 #include <Eigen/Sparse>
 
+inline void schrodingerInitSLEPc() {
+    static bool init = false;
+    if (!init)
+        SlepcInitialize(nullptr, nullptr, nullptr, nullptr);
+}
+
 struct SLEPcMatrix {
-    static inline bool init = false;
     Mat slepcMatrix;
     Eigen::SparseMatrix<double, Eigen::RowMajor, PetscInt> eigenMatrix;
 
 
     explicit SLEPcMatrix(const Eigen::SparseMatrix<double, Eigen::RowMajor> &eigenMatrix_)
             : slepcMatrix{}, eigenMatrix(eigenMatrix_) {
-        if (!init)
-            SlepcInitialize(nullptr, nullptr, nullptr, nullptr);
-
-        std::vector<PetscInt> nnz;
+        schrodingerInitSLEPc();
 
         eigenMatrix.makeCompressed();
         MatCreateSeqAIJWithArrays(
@@ -30,10 +32,34 @@ struct SLEPcMatrix {
 
     SLEPcMatrix(const SLEPcMatrix &) = delete;
 
-    SLEPcMatrix(SLEPcMatrix &&) = delete;
+    SLEPcMatrix(SLEPcMatrix &&) = default;
 
     ~SLEPcMatrix() {
         MatDestroy(&slepcMatrix);
+    }
+};
+
+struct SLEPcVector {
+    Vec slepcVector;
+
+    explicit SLEPcVector(const Eigen::Matrix<double, Eigen::Dynamic, 1> &v)
+            : slepcVector{} {
+        schrodingerInitSLEPc();
+
+        VecCreateSeq(PETSC_COMM_WORLD, (PetscInt) v.rows(), &slepcVector);
+
+        double *data;
+        VecGetArray(slepcVector, &data);
+        std::copy(v.data(), v.data() + v.rows(), data);
+    }
+
+
+    SLEPcVector(const SLEPcVector &) = delete;
+
+    SLEPcVector(SLEPcVector &&) = default;
+
+    ~SLEPcVector() {
+        VecDestroy(&slepcVector);
     }
 };
 
