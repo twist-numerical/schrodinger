@@ -1,6 +1,8 @@
 #include "eigenpairs.h"
 #include <Eigen/Sparse>
 #include <algorithm>
+#include <numeric>
+#include "../util/right_kernel.h"
 
 using namespace schrodinger;
 
@@ -138,6 +140,37 @@ public:
         }
         return permutation.transpose() * r;
     }
+
+    SparseMatrix lstsqNullSpace() {
+        std::vector<MatrixXs> nullBlocks;
+
+        Eigen::VectorXi toReserve{rows};
+        Eigen::Index i = 0;
+        Eigen::Index nullCols = 0;
+        for (auto &block: leastSquares) {
+            nullBlocks.emplace_back(schrodinger::internal::rightKernel(block, 1e-8));
+            nullCols += nullBlocks.back().cols();
+            toReserve.middleRows(i, block.cols()) = Eigen::VectorXi::Constant(block.cols(), nullBlocks.back().cols());
+            i += block.cols();
+        }
+
+        SparseMatrix r{rows, nullCols};
+        r.reserve(toReserve);
+
+        {
+            Eigen::Index i = 0;
+            Eigen::Index j = 0;
+            for (auto &block: nullBlocks) {
+                for (int i1 = 0; i1 < block.rows(); ++i1)
+                    for (int j1 = 0; j1 < block.cols(); ++j1)
+                        r.insert(i + i1, j + j1) = block(i1, j1);
+                i += block.rows();
+                j += block.cols();
+            }
+        }
+
+        return permutation.transpose() * r;
+    }
 };
 
 
@@ -156,7 +189,9 @@ public:
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>>
-sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, int) {
+sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, int nev) {
+    if (nev < 0)
+        nev = 10;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXs;
     typedef Eigen::SparseMatrix<Scalar, Eigen::RowMajor> SparseMatrix;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorXs;
@@ -177,18 +212,50 @@ sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, int) {
     EPSSetOperators(eps, A.slepcMatrix, nullptr);
     EPSSetProblemType(eps, EPS_NHEP);
 
-    SparseMatrix diff = lstsq_x - lstsq_y;
+    SparseMatrix yNullSpace = Bx.lstsqNullSpace();
+    SparseMatrix xNullSpace = By.lstsqNullSpace();
+    SparseMatrix diff{xNullSpace.rows(), 0}; // (lstsq_x - lstsq_y).transpose();
+    // std::cout << diff.rows() << ", " << xNullSpace.rows() << ", " << yNullSpace.rows() << std::endl;
+
+    assert(xNullSpace.rows() == yNullSpace.rows());
+    SparseMatrix nullSpace{xNullSpace.rows(), diff.cols() + xNullSpace.cols() + yNullSpace.cols()};
+    nullSpace.reserve(xNullSpace.nonZeros() + yNullSpace.nonZeros());
+    for (Eigen::Index r = 0; r < nullSpace.rows(); ++r) {
+        nullSpace.startVec(r);
+        Eigen::Index col = 0;
+        for (typename SparseMatrix::InnerIterator it_x(xNullSpace, r); it_x; ++it_x)
+            nullSpace.insertBack(r, col + it_x.col()) = it_x.value();
+        col += xNullSpace.cols();
+        for (typename SparseMatrix::InnerIterator it_y(yNullSpace, r); it_y; ++it_y)
+            nullSpace.insertBack(r, col + it_y.col()) = it_y.value();
+        col += yNullSpace.cols();
+        for (typename SparseMatrix::InnerIterator it_diff(diff, r); it_diff; ++it_diff)
+            nullSpace.insertBack(r, col + it_diff.col()) = it_diff.value();
+    }
+    nullSpace.finalize();
+
+    Eigen::SparseQR<Eigen::SparseMatrix<Scalar>, Eigen::COLAMDOrdering<int>> nullSpaceQR;
+    nullSpaceQR.setPivotThreshold(.1);
+    nullSpaceQR.compute(nullSpace);
+    std::cout << nullSpace.rows() << " x " << nullSpace.cols() << " -> " << nullSpaceQR.rank() << std::endl;
+    MatrixXs nullSpaceQ =
+            nullSpaceQR.matrixQ() * MatrixXs::Identity(nullSpace.rows(), nullSpace.rows()).leftCols(nullSpaceQR.rank());
+    std::cout << "Q computed" << std::endl;
+
     std::vector<SLEPcVector> deflationSpace;
-    deflationSpace.reserve(diff.rows());
+    deflationSpace.reserve(diff.rows() + xNullSpace.cols() + yNullSpace.cols());
     for (Eigen::Index i = 0; i < diff.rows(); ++i) {
-        deflationSpace.emplace_back(diff.row(i).transpose().toDense());
+        // deflationSpace.emplace_back(diff.row(i).transpose().toDense());
+    }
+    for (Eigen::Index i = 0; i < nullSpaceQ.cols(); ++i) {
+        deflationSpace.emplace_back(nullSpaceQ.col(i));
     }
 
     // EPSSetWhichEigenpairs(eps, EPS_TARGET_MAGNITUDE);
-    EPSSetTarget(eps, 8);
+    // EPSSetTarget(eps, 8);
     // EPSSetInterval(eps, 0.1, 10);
-    // EPSSetWhichEigenpairs(eps, EPS_SMALLEST_REAL);
-    EPSSetDimensions(eps, 100, 150, 50);
+    EPSSetWhichEigenpairs(eps, EPS_SMALLEST_REAL);
+    EPSSetDimensions(eps, nev, 3 * nev / 2, nev / 2);
     EPSSetDeflationSpace(eps, (PetscInt) deflationSpace.size(), (Vec *) deflationSpace.data());
     EPSSolve(eps);
 
@@ -207,6 +274,27 @@ sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, int) {
                                nconv, EPSConvergedReasons[reason]);
     }
     PetscViewerPopFormat(viewer);
+
+    EPSGetConverged(eps, &nconv);
+    result.reserve(nconv);
+    for (int i = 0; i < nconv; ++i) {
+        Scalar value;
+        SLEPcVector vec;
+        EPSGetEigenpair(eps, i, &value, nullptr, vec.slepcVector, nullptr);
+
+
+        if constexpr (withEigenfunctions) {
+            VectorXs v(Bx.cols + By.cols);
+            v.topRows(Bx.cols) = lstsq_x * vec.toEigen();
+            v.bottomRows(By.cols) = lstsq_y * vec.toEigen();
+            result.emplace_back(
+                    value,
+                    std::make_unique<typename Schrodinger2D<Scalar>::Eigenfunction>(schrodinger, value, v)
+            );
+        } else {
+            result.emplace_back(value);
+        }
+    }
 
 #else
     Eigen::Index nev = n - 2;

@@ -21,7 +21,7 @@ TEST_CASE("Henon Heiles", "[henonheiles]") {
                     .maxBasisSize=N,
             });
 
-    checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(), 1e-4);
+    checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(20), 1e-4);
 }
 
 
@@ -37,7 +37,7 @@ TEST_CASE("Sparse Henon Heiles", "[henonheiles][sparse]") {
                     .sparse=true
             });
 
-    checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(), 1e-4);
+    checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(20), 1e-4);
 }
 
 

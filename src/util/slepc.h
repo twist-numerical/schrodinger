@@ -42,6 +42,10 @@ struct SLEPcMatrix {
 struct SLEPcVector {
     Vec slepcVector;
 
+    explicit SLEPcVector() : slepcVector{} {
+        schrodingerInitSLEPc();
+    }
+
     explicit SLEPcVector(const Eigen::Matrix<double, Eigen::Dynamic, 1> &v)
             : slepcVector{} {
         schrodingerInitSLEPc();
@@ -53,6 +57,13 @@ struct SLEPcVector {
         std::copy(v.data(), v.data() + v.rows(), data);
     }
 
+    Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, 1>> toEigen() {
+        PetscInt size;
+        double *data;
+        VecGetArray(slepcVector, &data);
+        VecGetSize(slepcVector, &size);
+        return Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, 1>>{data, size};
+    }
 
     SLEPcVector(const SLEPcVector &) = delete;
 

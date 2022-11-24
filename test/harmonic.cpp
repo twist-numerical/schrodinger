@@ -28,7 +28,7 @@ TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
                                     .sparse=true
                             });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
+    checkEigenvalues<double>(expected, s.eigenvalues(30), 1e-4);
 }
 
 /*
