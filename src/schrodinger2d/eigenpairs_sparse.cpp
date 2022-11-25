@@ -185,11 +185,109 @@ public:
 #include <Spectra/MatOp/SparseGenMatProd.h>
 #include <Spectra/MatOp/SparseGenRealShiftSolve.h>
 
+// https://spectralib.org/doc/classspectra_1_1sparsegenrealshiftsolve
+template<typename Scalar_>
+class SparseDeflatedRealShiftSolve {
+public:
+    using Scalar = Scalar_;
+
+private:
+    using Index = Eigen::Index;
+    using Vector = Eigen::Matrix<Scalar, Eigen::Dynamic, 1>;
+    using SparseMatrix = Eigen::SparseMatrix<Scalar>;
+    using MapConstVec = Eigen::Map<const Vector>;
+    using MapVec = Eigen::Map<Vector>;
+
+    const Eigen::Ref<const SparseMatrix> m_mat;
+    const Index m_n;
+    Eigen::SparseLU<SparseMatrix> m_solver;
+    std::vector<SparseMatrix> deflations;
+
+public:
+    ///
+    /// Constructor to create the matrix operation object.
+    ///
+    /// \param mat An **Eigen** sparse matrix object, whose type can be
+    /// `Eigen::SparseMatrix<Scalar, ...>` or its mapped version
+    /// `Eigen::Map<Eigen::SparseMatrix<Scalar, ...> >`.
+    ///
+    template<typename Derived>
+    SparseDeflatedRealShiftSolve(const Eigen::SparseMatrixBase<Derived> &mat) :
+            m_mat(mat), m_n(mat.rows()) {
+        eigen_assert(mat.rows() == mat.cols());
+    }
+
+    ///
+    /// Should be an orthonormal matrix with as columns a basis for a deflation space.
+    /// Deflation spaces may intersect.Z
+    ///
+    void add_deflation(const SparseMatrix &basis) {
+        eigen_assert(m_n == basis.rows());
+        deflations.push_back(basis);
+
+        SparseMatrix I{basis.cols(), basis.cols()};
+        I.setIdentity();
+        if ((basis.transpose() * basis - I).norm() > 1e-6)
+            throw std::runtime_error("Deflation basis is not orthonormal");
+    }
+
+    ///
+    /// Return the number of rows of the underlying matrix.
+    ///
+    Index rows() const { return m_n; }
+
+    ///
+    /// Return the number of columns of the underlying matrix.
+    ///
+    Index cols() const { return m_n; }
+
+    ///
+    /// Set the real shift \f$\sigma\f$.
+    ///
+    void set_shift(const Scalar &sigma) {
+        MATSLISE_SCOPED_TIMER("SPECTRA set_shift");
+        SparseMatrix I(m_n, m_n);
+        I.setIdentity();
+
+        m_solver.compute(m_mat - sigma * I);
+        if (m_solver.info() != Eigen::Success)
+            throw std::invalid_argument("SparseGenRealShiftSolve: factorization failed with the given shift");
+    }
+
+    ///
+    /// Perform the shift-solve operation \f$y=(A-\sigma I)^{-1}x\f$.
+    ///
+    /// \param x_in  Pointer to the \f$x\f$ vector.
+    /// \param y_out Pointer to the \f$y\f$ vector.
+    ///
+    // y_out = inv(A - sigma * I) * x_in
+    void perform_op(const Scalar *x_in, Scalar *y_out) const {
+        MATSLISE_SCOPED_TIMER("SPECTRA perform_op");
+        // https://web.stanford.edu/~lmackey/papers/deflation-nips08.pdf
+        Vector x1, x2;
+        x1 = MapConstVec{x_in, m_n};
+        for (auto &U: deflations) {
+            MATSLISE_SCOPED_TIMER("SPECTRA deflate forward");
+            x2.noalias() = U.transpose() * x1;
+            x1.noalias() -= U * x2;
+        }
+        MapVec y(y_out, m_n);
+        y.noalias() = m_solver.solve(x1);
+        for (auto it = deflations.rbegin(); it != deflations.rend(); ++it) {
+            MATSLISE_SCOPED_TIMER("SPECTRA deflate backward");
+            x2.noalias() = (*it).transpose() * y;
+            y.noalias() -= (*it) * x2;
+        }
+    }
+};
+
 #endif
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>>
-sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, int nev) {
+sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, Eigen::Index nev) {
+    MATSLISE_SCOPED_TIMER("Sparse eigenpairs");
+
     if (nev < 0)
         nev = 10;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXs;
@@ -235,20 +333,30 @@ sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, int nev) {
     nullSpace.finalize();
 
     Eigen::SparseQR<Eigen::SparseMatrix<Scalar>, Eigen::COLAMDOrdering<int>> nullSpaceQR;
-    nullSpaceQR.setPivotThreshold(.1);
-    nullSpaceQR.compute(nullSpace);
-    std::cout << nullSpace.rows() << " x " << nullSpace.cols() << " -> " << nullSpaceQR.rank() << std::endl;
-    MatrixXs nullSpaceQ =
-            nullSpaceQR.matrixQ() * MatrixXs::Identity(nullSpace.rows(), nullSpace.rows()).leftCols(nullSpaceQR.rank());
-    std::cout << "Q computed" << std::endl;
+    {
+        MATSLISE_SCOPED_TIMER("QR-decomposition");
+        nullSpaceQR.setPivotThreshold(.1);
+        nullSpaceQR.compute(nullSpace);
+
+        std::cout << nullSpace.rows() << " x " << nullSpace.cols() << " -> " << nullSpaceQR.rank() << std::endl;
+    }
+    MatrixXs nullSpaceQ;
+
+    {
+        MATSLISE_SCOPED_TIMER("Q-Matrix");
+        nullSpaceQ = nullSpaceQR.matrixQ() *
+                     MatrixXs::Identity(nullSpace.rows(), nullSpace.rows()).leftCols(nullSpaceQR.rank());
+        std::cout << "Q computed" << std::endl;
+    }
 
     std::vector<SLEPcVector> deflationSpace;
-    deflationSpace.reserve(diff.rows() + xNullSpace.cols() + yNullSpace.cols());
-    for (Eigen::Index i = 0; i < diff.rows(); ++i) {
-        // deflationSpace.emplace_back(diff.row(i).transpose().toDense());
-    }
-    for (Eigen::Index i = 0; i < nullSpaceQ.cols(); ++i) {
-        deflationSpace.emplace_back(nullSpaceQ.col(i));
+
+    {
+        MATSLISE_SCOPED_TIMER("Build deflation space");
+        deflationSpace.reserve(diff.rows() + xNullSpace.cols() + yNullSpace.cols());
+        for (Eigen::Index i = 0; i < nullSpaceQ.cols(); ++i) {
+            deflationSpace.emplace_back(nullSpaceQ.col(i));
+        }
     }
 
     // EPSSetWhichEigenpairs(eps, EPS_TARGET_MAGNITUDE);
@@ -257,7 +365,11 @@ sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, int nev) {
     EPSSetWhichEigenpairs(eps, EPS_SMALLEST_REAL);
     EPSSetDimensions(eps, nev, 3 * nev / 2, nev / 2);
     EPSSetDeflationSpace(eps, (PetscInt) deflationSpace.size(), (Vec *) deflationSpace.data());
-    EPSSolve(eps);
+
+    {
+        MATSLISE_SCOPED_TIMER("EPSSolve");
+        EPSSolve(eps);
+    }
 
     PetscInt nconv;
     EPSConvergedReason reason;
@@ -275,44 +387,83 @@ sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, int nev) {
     }
     PetscViewerPopFormat(viewer);
 
-    EPSGetConverged(eps, &nconv);
-    result.reserve(nconv);
-    for (int i = 0; i < nconv; ++i) {
-        Scalar value;
-        SLEPcVector vec;
-        EPSGetEigenpair(eps, i, &value, nullptr, vec.slepcVector, nullptr);
+
+    {
+        MATSLISE_SCOPED_TIMER(withEigenfunctions ? "Collect eigenfunctions" : "Collect eigenvalues");
+        EPSGetConverged(eps, &nconv);
+        result.reserve(nconv);
+        for (int i = 0; i < nconv; ++i) {
+            Scalar value;
+            SLEPcVector vec;
+            EPSGetEigenpair(eps, i, &value, nullptr, vec.slepcVector, nullptr);
 
 
-        if constexpr (withEigenfunctions) {
-            VectorXs v(Bx.cols + By.cols);
-            v.topRows(Bx.cols) = lstsq_x * vec.toEigen();
-            v.bottomRows(By.cols) = lstsq_y * vec.toEigen();
-            result.emplace_back(
-                    value,
-                    std::make_unique<typename Schrodinger2D<Scalar>::Eigenfunction>(schrodinger, value, v)
-            );
-        } else {
-            result.emplace_back(value);
+            if constexpr (withEigenfunctions) {
+                VectorXs v(Bx.cols + By.cols);
+                v.topRows(Bx.cols) = lstsq_x * vec.toEigen();
+                v.bottomRows(By.cols) = lstsq_y * vec.toEigen();
+                result.emplace_back(
+                        value,
+                        std::make_unique<typename Schrodinger2D<Scalar>::Eigenfunction>(schrodinger, value, v)
+                );
+            } else {
+                result.emplace_back(value);
+            }
         }
     }
-
 #else
-    Eigen::Index nev = n - 2;
-    Spectra::SparseGenMatProd<Scalar, Eigen::RowMajor> op(Bx.fullMatrix() + By.fullMatrix());
-    Spectra::GenEigsSolver<decltype(op)> eigenSolver(op, nev, std::min(2 * nev + 1, n));
-    eigenSolver.init();
-    Eigen::Index nconv = eigenSolver.compute();
-    std::cout << "Converged: " << nconv << std::endl;
+    SparseDeflatedRealShiftSolve<Scalar> op(Bx.fullMatrix() + By.fullMatrix());
+    op.add_deflation(Bx.lstsqNullSpace());
+    op.add_deflation(By.lstsqNullSpace());
+    // To do: make sure sigma is lower bound!
+    Scalar sigma = -1;
+    Spectra::GenEigsRealShiftSolver<decltype(op)> eigenSolver(
+            op, nev, std::min(2 * nev + 1, n), sigma);
+    {
+        MATSLISE_SCOPED_TIMER("SPECTRA init");
+        eigenSolver.init();
+    }
 
-    Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, 1> values = eigenSolver.eigenvalues();
-    Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, Eigen::Dynamic> vectors = eigenSolver.eigenvectors();
-    MatrixXs vx = lstsq_x * vectors.real();
-    MatrixXs vy = lstsq_y * vectors.real();
-    VectorXs norms = (Bx.asMatrix() * vx - By.asMatrix() * vy).colwise().norm();
-    VectorXs norm2s = (Bx.asMatrix() * vx + By.asMatrix() * vy).colwise().norm();
+    {
+        MATSLISE_SCOPED_TIMER("SPECTRA compute");
 
-    for (Eigen::Index i = 0; i < values.size(); ++i) {
-        if (std::abs(values(i).imag()) < 1e-4 && norms(i) < 1e-1 && norm2s(i) > 1e-2) {
+        eigenSolver.compute(Spectra::SortRule::LargestMagn, 1000, 1e-10,
+                            Spectra::SortRule::SmallestReal);
+    }
+    if (eigenSolver.info() != Spectra::CompInfo::Successful)
+        throw std::runtime_error("The eigensolver did not find success...");
+
+    {
+        MATSLISE_SCOPED_TIMER(withEigenfunctions ? "Collect eigenfunctions" : "Collect eigenvalues");
+        Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, 1> values = eigenSolver.eigenvalues();
+        Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, Eigen::Dynamic> vectors = eigenSolver.eigenvectors();
+        MatrixXs vx = lstsq_x * vectors.real();
+        MatrixXs vy = lstsq_y * vectors.real();
+
+        /*
+        VectorXs norms = (Bx.asMatrix() * vx - By.asMatrix() * vy).colwise().norm();
+        VectorXs norm2s = (Bx.asMatrix() * vx + By.asMatrix() * vy).colwise().norm();
+
+
+        for (Eigen::Index i = 0; i < values.size(); ++i) {
+            if (std::abs(values(i).imag()) < 1e-4 && norms(i) < 1e-1 && norm2s(i) > 1e-2) {
+                if constexpr (withEigenfunctions) {
+                    VectorXs v(Bx.cols + By.cols);
+                    v.topRows(Bx.cols) = vx.col(i);
+                    v.bottomRows(By.cols) = vy.col(i);
+                    result.emplace_back(
+                            values(i).real(),
+                            std::make_unique<typename Schrodinger2D<Scalar>::Eigenfunction>(
+                                    schrodinger, values(i).real(), v)
+                    );
+                } else {
+                    result.emplace_back(values(i).real());
+                }
+            }
+        }
+         */
+
+        for (Eigen::Index i = 0; i < values.size(); ++i) {
             if constexpr (withEigenfunctions) {
                 VectorXs v(Bx.cols + By.cols);
                 v.topRows(Bx.cols) = vx.col(i);
@@ -343,7 +494,7 @@ sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, int nev) {
 #define SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, withEigenfunctions) \
 template \
 std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>> \
-sparseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger2D<Scalar> *, int);
+sparseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger2D<Scalar> *, Eigen::Index);
 
 #define SCHRODINGER_INSTANTIATE(Scalar) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, false) \

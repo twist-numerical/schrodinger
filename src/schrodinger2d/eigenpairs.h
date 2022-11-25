@@ -8,15 +8,15 @@
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename schrodinger::Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>>
-denseEigenpairs(const schrodinger::Schrodinger2D<Scalar> *self, int eigenvalueCount);
+denseEigenpairs(const schrodinger::Schrodinger2D<Scalar> *self, Eigen::Index eigenvalueCount);
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename schrodinger::Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>>
-sparseEigenpairs(const schrodinger::Schrodinger2D<Scalar> *self, int eigenvalueCount);
+sparseEigenpairs(const schrodinger::Schrodinger2D<Scalar> *self, Eigen::Index eigenvalueCount);
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename schrodinger::Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>>
-eigenpairs(const schrodinger::Schrodinger2D<Scalar> *self, int eigenvalueCount) {
+eigenpairs(const schrodinger::Schrodinger2D<Scalar> *self, Eigen::Index eigenvalueCount) {
     if (self->options.sparse)
         return sparseEigenpairs<Scalar, withEigenfunctions>(self, eigenvalueCount);
     else

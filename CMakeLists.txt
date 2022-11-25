@@ -19,6 +19,8 @@ SET(SCHRODINGER_SRC src/schrodinger2d/eigenfunction.cpp src/schrodinger2d/schrod
 
 add_library(schrodinger ${SCHRODINGER_SRC})
 
+SET(PROFILE ON)
+add_compile_definitions(MATSLISE_PROFILING)
 SET(MATSLISE_STATIC ON)
 SET(MATSLISE_MATSCS OFF)
 SET(MATSLISE_2D OFF)
@@ -54,7 +56,7 @@ if (SLEPC_VERSION)
     message("-- Using SLEPc: ${SLEPC_VERSION}")
     set(libraries ${libraries} PkgConfig::SLEPC)
     set(SCHRODINGER_SRC ${SCHRODINGER_SRC} src/util/right_kernel_sparse.cpp)
-    add_definitions(-DSCHRODINGER_SLEPC)
+    # add_definitions(-DSCHRODINGER_SLEPC)
 endif ()
 
 include_directories(lib/spectra/include)

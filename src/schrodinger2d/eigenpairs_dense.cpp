@@ -8,7 +8,7 @@ using namespace schrodinger;
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>>
-denseEigenpairs(const Schrodinger2D<Scalar> *self, int eigenvalueCount) {
+denseEigenpairs(const Schrodinger2D<Scalar> *self, Eigen::Index eigenvalueCount) {
     using MatrixXs = typename Schrodinger2D<Scalar>::MatrixXs;
     using VectorXs = typename Schrodinger2D<Scalar>::VectorXs;
 
@@ -77,7 +77,7 @@ denseEigenpairs(const Schrodinger2D<Scalar> *self, int eigenvalueCount) {
 #define SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, withEigenfunctions) \
 template \
 std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>> \
-denseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger2D<Scalar> *, int);
+denseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger2D<Scalar> *, Eigen::Index);
 
 #define SCHRODINGER_INSTANTIATE(Scalar) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, false) \
