@@ -200,8 +200,11 @@ private:
 
     const Eigen::Ref<const SparseMatrix> m_mat;
     const Index m_n;
-    Eigen::SparseLU<SparseMatrix> m_solver;
     std::vector<SparseMatrix> deflations;
+
+    Eigen::SparseLU<SparseMatrix> m_solver;
+    // Eigen::SparseQR<SparseMatrix, Eigen::COLAMDOrdering<int>> m_solver;
+    // Eigen::BiCGSTAB<SparseMatrix> m_solver;
 
 public:
     ///
@@ -212,23 +215,18 @@ public:
     /// `Eigen::Map<Eigen::SparseMatrix<Scalar, ...> >`.
     ///
     template<typename Derived>
-    SparseDeflatedRealShiftSolve(const Eigen::SparseMatrixBase<Derived> &mat) :
+    explicit SparseDeflatedRealShiftSolve(const Eigen::SparseMatrixBase<Derived> &mat) :
             m_mat(mat), m_n(mat.rows()) {
         eigen_assert(mat.rows() == mat.cols());
     }
 
     ///
     /// Should be an orthonormal matrix with as columns a basis for a deflation space.
-    /// Deflation spaces may intersect.Z
+    /// Deflation spaces may intersect.
     ///
     void add_deflation(const SparseMatrix &basis) {
         eigen_assert(m_n == basis.rows());
         deflations.push_back(basis);
-
-        SparseMatrix I{basis.cols(), basis.cols()};
-        I.setIdentity();
-        if ((basis.transpose() * basis - I).norm() > 1e-6)
-            throw std::runtime_error("Deflation basis is not orthonormal");
     }
 
     ///

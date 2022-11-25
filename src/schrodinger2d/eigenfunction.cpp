@@ -1,8 +1,5 @@
-#include "matslise/util/quadrature.h"
 #include "../util/polymorphic_value.h"
 #include "../schrodinger2d.h"
-#include <numeric>
-#include "../util/right_kernel.h"
 #include "../util/rectangular_pencil.h"
 #include <chrono>
 

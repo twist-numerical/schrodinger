@@ -1,4 +1,3 @@
-#include "matslise/util/quadrature.h"
 #include "../util/polymorphic_value.h"
 #include "../schrodinger2d.h"
 #include "./eigenpairs.h"
