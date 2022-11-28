@@ -96,7 +96,7 @@ TEST_CASE("Quartic potential", "[quartic>]") {
                                         .maxBasisSize=18
                                 });
 
-        checkEigenvalues<double>(pe.second, s.eigenvalues(), 1e-6);
+        checkEigenvalues<double>(pe.second, s.eigenvalues(pe.second.size()), 1e-6);
     }
 }
 

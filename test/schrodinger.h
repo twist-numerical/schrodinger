@@ -22,6 +22,8 @@ inline void checkEigenpairs(
         const std::vector<std::pair<Scalar, std::vector<std::function<Scalar(Scalar, Scalar)>>>> &expected,
         const std::vector<std::pair<Scalar, std::unique_ptr<Eigenfunction>>> &found, Scalar tolerance = 1e-8
 ) {
+    REQUIRE(expected.size() <= found.size());
+
     typedef Eigen::Array<Scalar, Eigen::Dynamic, 1> ArrayXs;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXXs;
 

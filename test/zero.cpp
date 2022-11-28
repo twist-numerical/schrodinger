@@ -45,7 +45,8 @@ TEST_CASE("Zero potential eigenfunction", "[zero]") {
                 ++total;
             }
 
-    auto eigenfunctions = s.eigenfunctions();
+    auto eigenfunctions = s.eigenfunctions(total);
+    REQUIRE((int) eigenfunctions.size() >= total);
     std::sort(eigenfunctions.begin(), eigenfunctions.end(), [](auto &a, auto &b) { return a.first < b.first; });
     eigenfunctions.erase(eigenfunctions.begin() + total, eigenfunctions.end());
 

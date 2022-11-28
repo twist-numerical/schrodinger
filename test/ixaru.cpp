@@ -21,7 +21,7 @@ TEST_CASE("Ixaru potential vertical", "[ixaru]") {
                                     .maxBasisSize=18
                             });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
+    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
 }
 
 TEST_CASE("Ixaru potential horizontal", "[ixaru]") {
@@ -32,7 +32,7 @@ TEST_CASE("Ixaru potential horizontal", "[ixaru]") {
                                     .maxBasisSize=18
                             });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
+    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
 }
 
 TEST_CASE("Ixaru potential diamond", "[ixaru]") {
@@ -44,7 +44,7 @@ TEST_CASE("Ixaru potential diamond", "[ixaru]") {
                                     .maxBasisSize=18
                             });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
+    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
 }
 
 TEST_CASE("Ixaru potential disc", "[ixaru]") {
@@ -55,7 +55,7 @@ TEST_CASE("Ixaru potential disc", "[ixaru]") {
                                     .maxBasisSize=18
                             });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
+    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
 }
 
 #ifdef SCHRODINGER_LONG_DOUBLE
@@ -69,7 +69,7 @@ TEST_CASE("Ixaru potential long double", "[ixaru][long double]") {
                                     .maxBasisSize=20
                             });
 
-    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(), 1e-8);
+    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(expected.size()), 1e-8);
 }
 
 #endif
