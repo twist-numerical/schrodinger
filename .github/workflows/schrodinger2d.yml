@@ -3,8 +3,8 @@ name: Build and test schrodinger2d
 on: [ push ]
 
 jobs:
-  schrodinger2d_test:
-    name: Test schrodinger2d
+  schrodinger_test:
+    name: Test schrodinger
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -63,3 +63,72 @@ jobs:
         run: |
           ./schrodinger_test
         working-directory: ./build
+
+  schrodinger_python_test:
+    name: Test python bindings
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ windows-2019, ubuntu-18.04, macos-10.15 ]
+        python-version: [ 3.8 ]
+    steps:
+      - name: Cache Eigen3
+        id: cache-eigen3_3
+        uses: actions/cache@v1
+        with:
+          path: ../eigen
+          key: ${{ runner.os }}-eigen3_3
+      - name: Download Eigen3
+        if: steps.cache-eigen3_3.outputs.cache-hit != 'true'
+        run: |
+          git clone https://gitlab.com/libeigen/eigen.git ../eigen
+          cd ../eigen
+          git checkout 3.3
+          mkdir ../eigen/build
+      - if: ${{startsWith(matrix.os, 'windows') && steps.cache-eigen3_3.outputs.cache-hit != 'true'}}
+        name: Build Eigen3 (Windows)
+        run: cmake -G "MinGW Makefiles" ..
+        working-directory: ../eigen/build
+      - if: ${{!startsWith(matrix.os, 'windows') && steps.cache-eigen3_3.outputs.cache-hit != 'true'}}
+        name: Build Eigen3 (not Windows)
+        run: cmake ..
+        working-directory: ../eigen/build
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install setuptools wheel
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - run: mkdir build
+      - if: ${{startsWith(matrix.os, 'windows')}}
+        name: CMake (Windows)
+        run: |
+          cmake -G "MinGW Makefiles" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DEigen3_DIR="$(resolve-path ../../eigen/build)" `
+            -DSCHRODINGER_LONG_DOUBLE=OFF `
+            -DSCHRODINGER_PYTHON=ON `
+            ..
+          cmake --build . --target install_schrodinger_py --config Release
+        working-directory: ./build
+        env:
+          CXXFLAGS: "-DMS_WIN64=1 -D_hypot=hypot -static-libgcc -static"
+          LDFLAGS: "-static -Wl,--allow-multiple-definition"
+      - if: ${{!startsWith(matrix.os, 'windows')}}
+        name: CMake (not Windows)
+        run: |
+          cmake .. -DCMAKE_BUILD_TYPE=Release \
+            -DEigen3_DIR="$(pwd)/../../eigen/build" \
+            -DSCHRODINGER_LONG_DOUBLE=OFF \
+            -DSCHRODINGER_PYTHON=ON
+          cmake --build . --target install_schrodinger_py --config Release -- -j 3
+        working-directory: ./build
+      - name: test pyslise
+        run: |
+          python test/pyslise/test_docs.py
