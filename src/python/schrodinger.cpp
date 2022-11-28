@@ -69,18 +69,32 @@ PYBIND11_MODULE(schrodinger, m) {
     py::class_<Schrodinger2D<double>, std::shared_ptr<Schrodinger2D<double>>>(m, "Schrodinger2D")
             .def(py::init(
                          [](const std::function<double(double, double)> &V, const Domain<double, 2> &domain,
-                            const std::array<int, 2> &gridSize, int maxBasisSize) {
+                            const std::array<int, 2> &gridSize, int maxBasisSize, bool sparse) {
                              py::gil_scoped_release release;
                              return std::make_shared<Schrodinger2D<double>>(V, domain, (Options) {
                                      .gridSize = {.x = gridSize[0], .y=gridSize[1]},
                                      .maxBasisSize=maxBasisSize,
+                                     .sparse=sparse
                              });
                          }), py::arg("V"), py::arg("domain"), py::arg("gridSize") = std::array<int, 2>{21, 21},
-                 py::arg("maxBasisSize") = 16)
+                 py::arg("maxBasisSize") = 16, py::arg("sparse")=true)
             .def("eigenvalues", [](std::shared_ptr<const Schrodinger2D<double>> s, int eigenvalueCount) {
                 py::gil_scoped_release release;
                 return s->eigenvalues(eigenvalueCount);
-            }, py::arg("eigenvalueCount") = -1)
+            }, py::arg("k") = -1, R""""(\
+Calculate the first k eigenvalues.
+
+:param int k: minimal number of eigenvalues to find (default: 10).
+
+:returns: a list of eigenvalues with length at least k.
+
+>>> import numpy as np
+>>> from math import pi
+>>> r = Rectangle(0, pi, 0, pi)
+>>> s = Schrodinger2D(lambda x, y: 0, r)
+>>> np.array(s.eigenvalues(9)[:9]).round(6)
+array([ 2.,  5.,  5.,  8., 10., 10., 13., 13., 17.])
+)"""")
             .def("Beta", &Schrodinger2D<double>::Beta)
             .def("Lambda", &Schrodinger2D<double>::Lambda)
             .def("eigenfunctions", [](std::shared_ptr<const Schrodinger2D<double>> s, int eigenvalueCount) {

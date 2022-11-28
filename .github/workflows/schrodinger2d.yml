@@ -129,6 +129,6 @@ jobs:
             -DSCHRODINGER_PYTHON=ON
           cmake --build . --target install_schrodinger_py --config Release -- -j 3
         working-directory: ./build
-      - name: test pyslise
+      - name: Test installation
         run: |
-          python test/pyslise/test_docs.py
+          python test/python/test_docs.py
