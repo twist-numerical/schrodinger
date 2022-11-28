@@ -98,7 +98,7 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install setuptools wheel
+      - run: pip install setuptools wheel numpy # For the doctests numpy should be installed
       - uses: actions/checkout@v2
         with:
           submodules: recursive
