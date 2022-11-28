@@ -19,8 +19,10 @@ SET(SCHRODINGER_SRC src/schrodinger2d/eigenfunction.cpp src/schrodinger2d/schrod
 
 add_library(schrodinger ${SCHRODINGER_SRC})
 
-SET(PROFILE ON)
-add_compile_definitions(MATSLISE_PROFILING)
+set(defines "")
+
+# SET(PROFILE ON)
+# add_compile_definitions(MATSLISE_PROFILING)
 SET(MATSLISE_STATIC ON)
 SET(MATSLISE_MATSCS OFF)
 SET(MATSLISE_2D OFF)
@@ -29,11 +31,11 @@ SET(MATSLISE_PYTHON OFF)
 
 OPTION(SCHRODINGER_LONG_DOUBLE "Compile with support for long double" OFF)
 if (SCHRODINGER_LONG_DOUBLE)
-    add_definitions(-DSCHRODINGER_LONG_DOUBLE)
+    list(APPEND defines SCHRODINGER_LONG_DOUBLE)
     message("-- with support for long double")
-    set(LONG_DOUBLE ON)
+    set(MATSLISE_LONG_DOUBLE ON)
 else ()
-    set(LONG_DOUBLE OFF)
+    set(MATSLISE_LONG_DOUBLE OFF)
     message("-- without support for long double")
 endif ()
 
@@ -62,6 +64,7 @@ endif ()
 include_directories(lib/spectra/include)
 
 target_link_libraries(schrodinger PUBLIC ${libraries})
+target_compile_definitions(schrodinger PUBLIC ${defines})
 
 add_executable(schrodinger_test
         test/zero.cpp
@@ -91,6 +94,7 @@ if (SCHRODINGER_PYTHON)
         message("Adding schrodinger_py")
         pybind11_add_module(schrodinger_py MODULE src/python/schrodinger.cpp ${SCHRODINGER_SRC})
         target_link_libraries(schrodinger_py PRIVATE ${libraries})
+        target_compile_definitions(schrodinger_py PUBLIC ${defines})
         message("-- pybind: ${pybind11_VERSION}")
         message("-- python: ${PYTHON_EXECUTABLE}")
 

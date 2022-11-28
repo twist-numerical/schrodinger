@@ -16,7 +16,7 @@ TEST_CASE("Harmonic potential", "[harmonic]") {
                                     .maxBasisSize=20
                             });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(), 1e-4);
+    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
 }
 
 TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
@@ -28,7 +28,7 @@ TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
                                     .sparse=true
                             });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(30), 1e-4);
+    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
 }
 
 /*
@@ -93,7 +93,20 @@ TEST_CASE("Harmonic potential long double", "[harmonic][long double]") {
                                     .maxBasisSize=20
                             });
 
-    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(), 1e-8);
+    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(expected.size()), 1e-8);
+}
+
+TEST_CASE("Sparse harmonic potential long double", "[harmonic][long double][sparse]") {
+    typedef long double Scalar;
+    Schrodinger2D<Scalar> s([](Scalar x, Scalar y) { return x * x + y * y; },
+                            Rectangle<Scalar, 2>{-8.0, 8.0, -8.0, 8.0},
+                            Options{
+                                    .gridSize={.x=48, .y=48},
+                                    .maxBasisSize=20,
+                                    .sparse=true
+                            });
+
+    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(expected.size()), 1e-8);
 }
 
 #endif
