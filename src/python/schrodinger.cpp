@@ -15,9 +15,9 @@ using namespace schrodinger::geometry;
 
 template<typename T>
 void perDirection(const py::handle &scope, const std::string &name) {
-    py::class_<PerDirection<T>>(scope, name)
-            .def("x", &PerDirection<T>::x)
-            .def("y", &PerDirection<T>::y);
+    py::class_<PerDirection<T>>(scope, name.c_str())
+            .def_readonly("x", &PerDirection<T>::x)
+            .def_readonly("y", &PerDirection<T>::y);
 }
 
 PYBIND11_MODULE(schrodinger, m) {
