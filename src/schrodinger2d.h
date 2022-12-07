@@ -21,6 +21,7 @@ namespace schrodinger {
         int maxBasisSize = 22;
         double pencilThreshold = 1e-8;
         bool sparse = false;
+        bool shiftInvert = true;
     };
 
     template<typename Scalar>

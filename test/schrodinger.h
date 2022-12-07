@@ -16,6 +16,56 @@ checkEigenvalues(const std::vector<T> &expected,
     }
 }
 
+template<typename Scalar, typename T=Scalar>
+inline void checkOrthogonality(
+        const schrodinger::geometry::Domain<Scalar, 2> &domain,
+        const std::vector<T> &expected,
+        const std::vector<std::pair<Scalar, std::unique_ptr<typename schrodinger::Schrodinger2D<Scalar>::Eigenfunction>>> &found,
+        Scalar tolerance = 1e-8) {
+    std::vector<Scalar> calculatedValues;
+    calculatedValues.reserve(found.size());
+    std::transform(found.begin(), found.end(), std::back_inserter(calculatedValues),
+                   [](const auto &t) { return t.first; });
+    checkEigenvalues(expected, calculatedValues, tolerance);
+
+    // Degenerate eigenfunctions are not yet orthogonal
+    return;
+
+    auto xbounds = domain.bounds({1, 0});
+    auto ybounds = domain.bounds({0, 1});
+    Eigen::Index nx = 101, ny = 79;
+    Scalar hx = (xbounds.second - xbounds.first) / nx;
+    Scalar hy = (ybounds.second - ybounds.first) / ny;
+    std::vector<std::pair<Scalar, Scalar>> v;
+    for (Scalar x = xbounds.first + hx / 2; x < xbounds.second; x += hx)
+        for (Scalar y = ybounds.first + hy / 2; y < ybounds.second; y += hy) {
+            if (domain.contains({x, y}))
+                v.emplace_back(x, y);
+        }
+
+    Eigen::Array<Scalar, Eigen::Dynamic, 1> xs(v.size());
+    Eigen::Array<Scalar, Eigen::Dynamic, 1> ys(v.size());
+    Eigen::Index i = 0;
+    for (const auto &p: v) {
+        xs[i] = p.first;
+        ys[i] = p.second;
+        ++i;
+    }
+
+    std::vector<Eigen::Array<Scalar, Eigen::Dynamic, 1>> evals;
+    evals.reserve(found.size());
+    for (const auto &p: found)
+        evals.push_back((*p.second)(xs, ys));
+
+    Scalar scale = hx * hy;
+    for (auto &a: evals)
+        for (auto &b: evals) {
+            if (&a == &b) break;
+
+            REQUIRE(Approx((a*b).sum()*scale).margin(std::sqrt(tolerance)) == 0);
+        }
+}
+
 template<typename Scalar, typename Eigenfunction>
 inline void checkEigenpairs(
         const schrodinger::geometry::Domain<Scalar, 2> &domain,

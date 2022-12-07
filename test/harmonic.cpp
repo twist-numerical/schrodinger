@@ -1,6 +1,5 @@
 #include "schrodinger.h"
 
-using namespace Eigen;
 using namespace schrodinger;
 using namespace schrodinger::geometry;
 
@@ -9,78 +8,29 @@ const std::vector<double> expected{
 };
 
 TEST_CASE("Harmonic potential", "[harmonic]") {
+    Rectangle<double, 2> domain{-8.0, 8.0, -8.0, 8.0};
     Schrodinger2D<double> s([](double x, double y) { return x * x + y * y; },
-                            Rectangle<double, 2>{-8.0, 8.0, -8.0, 8.0},
+                            domain,
                             Options{
                                     .gridSize={.x=48, .y=48},
                                     .maxBasisSize=20
                             });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
+    checkOrthogonality(domain, expected, s.eigenfunctions(expected.size()), 1e-4);
 }
 
 TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
+    Rectangle<double, 2> domain{-8.0, 8.0, -8.0, 8.0};
     Schrodinger2D<double> s([](double x, double y) { return x * x + y * y; },
-                            Rectangle<double, 2>{-8.0, 8.0, -8.0, 8.0},
+                            domain,
                             Options{
                                     .gridSize={.x=48, .y=48},
                                     .maxBasisSize=20,
                                     .sparse=true
                             });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
+    checkOrthogonality(domain, expected, s.eigenfunctions(expected.size()), 1e-4);
 }
-
-/*
-TEST_CASE("Harmonic potential eigenfunction", "[harmonic]") {
-    Schrodinger2D<double> s([](double x, double y) { return x * x + y * y; },
-                            Rectangle<double, 2>{-8.0, 8.0, -8.0, 8.0},
-                            Options{
-                                    .gridSize={.x=40, .y=40},
-                                    .maxBasisSize=15,
-                            });
-
-    auto eigenfunctions = s.eigenfunctions();
-    std::function<bool(std::pair<double, Schrodinger2D<double>::Eigenfunction>, std::pair<double, Schrodinger2D<double>::Eigenfunction>)> comp =
-            [](auto a, auto b) {return a.first < b.first;};
-
-    std::sort(eigenfunctions.begin(), eigenfunctions.end(), comp);
-
-    printf("Eigenvalues:\n");
-    for (int i = 0; i < (int)eigenfunctions.size() && i < (int)eigenfunctions.size(); i++) {
-        printf("%d: %f\n", i, eigenfunctions[i].first);
-
-        // 100x100 grid
-
-        Schrodinger2D<double>::ArrayXs xs(100*100);
-        Schrodinger2D<double>::ArrayXs ys(100*100);
-        Array<double, Eigen::Dynamic, 1> grid = Array<double, Eigen::Dynamic, 1>::LinSpaced(102, -8, 8);
-        for (int xi = 0; xi < 100; xi++) {
-            for (int yi = 0; yi < 100; yi++) {
-                xs(xi + 100*yi) = grid(xi+1);
-                ys(xi + 100*yi) = grid(yi+1);
-            }
-        }
-
-
-
-        Schrodinger2D<double>::ArrayXs xs(4);
-        Schrodinger2D<double>::ArrayXs ys(4);
-        xs << 0.1, 0.1, 0.1, 0.1;
-        ys << 0.2, 0.3, 0.4, 0.5;
-
-
-        Schrodinger2D<double>::ArrayXs funValues = eigenfunctions[i].second(xs, ys);
-
-        printf("Result:");
-        //for (int j = 0; j < funValues.size(); j++) printf("%.3f; ", funValues(j));
-        printf("\n");
-
-    }
-
-}
-*/
-
 
 #ifdef SCHRODINGER_LONG_DOUBLE
 

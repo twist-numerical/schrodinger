@@ -124,7 +124,7 @@ Calculate the first k eigenvalues with corresponding eigenfunctions.
 >>> import numpy as np
 >>> from math import pi
 >>> r = Rectangle(-9.5, 9.5, -9.5, 9.5)
->>> s = Schrodinger2D(lambda x, y: x * x + y * y, r, gridSize=(40,40), maxBasisSize=20)
+>>> s = Schrodinger2D(lambda x, y: x * x + y * y, r, gridSize=(45,45), maxBasisSize=21)
 >>> eigenvalues, eigenfunctions = zip(*s.eigenfunctions(9))
 >>> np.array(eigenvalues[:9]).round(6)
 array([ 2., 4., 4., 6., 6., 6., 8., 8., 8.])
