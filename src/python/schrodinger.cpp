@@ -77,7 +77,7 @@ PYBIND11_MODULE(schrodinger, m) {
                                      .sparse=sparse
                              });
                          }), py::arg("V"), py::arg("domain"), py::arg("gridSize") = std::array<int, 2>{21, 21},
-                 py::arg("maxBasisSize") = 16, py::arg("sparse")=true)
+                 py::arg("maxBasisSize") = 16, py::arg("sparse") = true)
             .def("eigenvalues", [](std::shared_ptr<const Schrodinger2D<double>> s, int eigenvalueCount) {
                 py::gil_scoped_release release;
                 return s->eigenvalues(eigenvalueCount);
@@ -98,9 +98,11 @@ array([ 2.,  5.,  5.,  8., 10., 10., 13., 13., 17.])
             .def("Beta", &Schrodinger2D<double>::Beta)
             .def("Lambda", &Schrodinger2D<double>::Lambda)
             .def("eigenfunctions", [](std::shared_ptr<const Schrodinger2D<double>> s, int eigenvalueCount) {
-                py::gil_scoped_release release;
-                std::vector<std::pair<double, std::unique_ptr<Schrodinger2D<double>::Eigenfunction>>> eigs
-                        = s->eigenfunctions(eigenvalueCount);
+                std::vector<std::pair<double, std::unique_ptr<Schrodinger2D<double>::Eigenfunction>>> eigs;
+                {
+                    py::gil_scoped_release release;
+                    eigs = s->eigenfunctions(eigenvalueCount);
+                }
                 py::list r;
                 for (auto &ef: eigs) {
                     py::tuple t(2);
@@ -112,5 +114,19 @@ array([ 2.,  5.,  5.,  8., 10., 10., 13., 13., 17.])
                     r.append(t);
                 }
                 return r;
-            }, py::arg("eigenvalueCount") = -1);
+            }, py::arg("k") = -1, R""""(\
+Calculate the first k eigenvalues with corresponding eigenfunctions.
+
+:param int k: minimal number of eigenvalues (with eigenfunctions) to find (default: 10).
+
+:returns: a list of pairs of eigenvalues and eigenfunctions with length at least k.
+
+>>> import numpy as np
+>>> from math import pi
+>>> r = Rectangle(-9.5, 9.5, -9.5, 9.5)
+>>> s = Schrodinger2D(lambda x, y: x * x + y * y, r, gridSize=(40,40), maxBasisSize=20)
+>>> eigenvalues, eigenfunctions = zip(*s.eigenfunctions(9))
+>>> np.array(eigenvalues[:9]).round(6)
+array([ 2., 4., 4., 6., 6., 6., 8., 8., 8.])
+)"""");
 }
