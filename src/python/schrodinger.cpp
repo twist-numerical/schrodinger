@@ -127,6 +127,6 @@ Calculate the first k eigenvalues with corresponding eigenfunctions.
 >>> s = Schrodinger2D(lambda x, y: x * x + y * y, r, gridSize=(45,45), maxBasisSize=21)
 >>> eigenvalues, eigenfunctions = zip(*s.eigenfunctions(9))
 >>> np.array(eigenvalues[:9]).round(6)
-array([ 2., 4., 4., 6., 6., 6., 8., 8., 8.])
+array([2., 4., 4., 6., 6., 6., 8., 8., 8.])
 )"""");
 }
