@@ -112,7 +112,7 @@ public:
                          ) / (dy * dy);
             }
 
-        Eigen::Matrix<Scalar, 9, 1> sol = A.partialPivLu().solve(b);
+        Eigen::Matrix<Scalar, (size - 2) * (size - 2), 1> sol = A.partialPivLu().solve(b);
         for (int rx = 1; rx + 1 < size; rx++)
             for (int ry = 1; ry + 1 < size; ry++) {
                 int k = rx - 1 + (ry - 1) * (size - 2);
