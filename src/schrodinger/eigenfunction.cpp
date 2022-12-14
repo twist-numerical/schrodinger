@@ -1,5 +1,5 @@
 #include "../util/polymorphic_value.h"
-#include "../schrodinger2d.h"
+#include "../schrodinger.h"
 #include "../util/rectangular_pencil.h"
 #include <chrono>
 
@@ -11,9 +11,9 @@ using namespace schrodinger;
 
 template<typename Scalar>
 const Eigen::Array<Scalar,
-        Schrodinger2D<Scalar>::interpolationGridSize - 2, Schrodinger2D<Scalar>::interpolationGridSize - 2> &
-getTilePotential(const Schrodinger2D<Scalar> &problem, const typename Schrodinger2D<Scalar>::Tile *tile) {
-    constexpr int size = Schrodinger2D<Scalar>::interpolationGridSize;
+        Schrodinger<Scalar>::interpolationGridSize - 2, Schrodinger<Scalar>::interpolationGridSize - 2> &
+getTilePotential(const Schrodinger<Scalar> &problem, const typename Schrodinger<Scalar>::Tile *tile) {
+    constexpr int size = Schrodinger<Scalar>::interpolationGridSize;
     if (!tile->potential) {
         tile->potential.emplace();
 
@@ -26,7 +26,7 @@ getTilePotential(const Schrodinger2D<Scalar> &problem, const typename Schrodinge
 
 template<typename Scalar, int Rows>
 Array<Scalar, Rows, 1>
-reconstructEigenfunction(const typename Schrodinger2D<Scalar>::Thread *t, const Ref<const Array<Scalar, Dynamic, 1>> &c,
+reconstructEigenfunction(const typename Schrodinger<Scalar>::Thread *t, const Ref<const Array<Scalar, Dynamic, 1>> &c,
                          const Array<Scalar, Rows, 1> &v) {
     Array<Scalar, Rows, 1> r = Array<Scalar, Rows, 1>::Zero();
     for (size_t i = 0; i < t->eigenpairs.size(); ++i)
@@ -35,7 +35,7 @@ reconstructEigenfunction(const typename Schrodinger2D<Scalar>::Thread *t, const 
 }
 
 template<typename Scalar>
-class Schrodinger2D<Scalar>::Eigenfunction::EigenfunctionTile {
+class Schrodinger<Scalar>::Eigenfunction::EigenfunctionTile {
 public:
     static constexpr int size = interpolationGridSize;
 
@@ -164,7 +164,7 @@ public:
 };
 
 template<typename Scalar>
-Schrodinger2D<Scalar>::Eigenfunction::Eigenfunction(const Schrodinger2D<Scalar> *problem, Scalar E, const VectorXs &c)
+Schrodinger<Scalar>::Eigenfunction::Eigenfunction(const Schrodinger<Scalar> *problem, Scalar E, const VectorXs &c)
         : problem(problem), E(E), c(c) {
     tiles.reserve(problem->tiles.size());
     for (const auto &reference: problem->tiles) {
@@ -183,7 +183,7 @@ Index highestLowerIndex(const Array<Scalar, Dynamic, 1> &range, Scalar value) {
 }
 
 template<typename Scalar>
-Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) const {
+Scalar Schrodinger<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) const {
     Index ix = highestLowerIndex(problem->grid.x, x) + 1;
     Index iy = highestLowerIndex(problem->grid.y, y) + 1;
 
@@ -200,7 +200,7 @@ Scalar Schrodinger2D<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) cons
 
 template<typename Scalar>
 Eigen::Array<Scalar, Eigen::Dynamic, 1>
-Schrodinger2D<Scalar>::Eigenfunction::operator()(ArrayXs xs, ArrayXs ys) const {
+Schrodinger<Scalar>::Eigenfunction::operator()(ArrayXs xs, ArrayXs ys) const {
     assert(xs.size() == ys.size());
 
     ArrayXs result = ArrayXs::Zero(xs.size());
@@ -212,6 +212,6 @@ Schrodinger2D<Scalar>::Eigenfunction::operator()(ArrayXs xs, ArrayXs ys) const {
 }
 
 template<typename Scalar>
-Schrodinger2D<Scalar>::Eigenfunction::~Eigenfunction() = default;
+Schrodinger<Scalar>::Eigenfunction::~Eigenfunction() = default;
 
 #include "instantiate.h"

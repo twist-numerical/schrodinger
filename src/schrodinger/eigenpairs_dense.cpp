@@ -7,10 +7,10 @@
 using namespace schrodinger;
 
 template<typename Scalar, bool withEigenfunctions>
-std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>>
-denseEigenpairs(const Schrodinger2D<Scalar> *self, Eigen::Index eigenvalueCount) {
-    using MatrixXs = typename Schrodinger2D<Scalar>::MatrixXs;
-    using VectorXs = typename Schrodinger2D<Scalar>::VectorXs;
+std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>>
+denseEigenpairs(const Schrodinger<Scalar> *self, Eigen::Index eigenvalueCount) {
+    using MatrixXs = typename Schrodinger<Scalar>::MatrixXs;
+    using VectorXs = typename Schrodinger<Scalar>::VectorXs;
 
     Eigen::Index rows = self->intersections.size();
     Eigen::Index colsX = self->columns.x;
@@ -51,7 +51,7 @@ denseEigenpairs(const Schrodinger2D<Scalar> *self, Eigen::Index eigenvalueCount)
     if constexpr(withEigenfunctions) {
         const auto &vectors = pencil.eigenvectors();
 
-        typedef std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>> Eigenpair;
+        typedef std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>> Eigenpair;
         std::vector<Eigenpair> eigenfunctions;
 
         eigenfunctions.reserve(indices.size());
@@ -60,7 +60,7 @@ denseEigenpairs(const Schrodinger2D<Scalar> *self, Eigen::Index eigenvalueCount)
 
             eigenfunctions.emplace_back(
                     values(i).real(),
-                    std::make_unique<typename Schrodinger2D<Scalar>::Eigenfunction>(self, values(i).real(), coeffs)
+                    std::make_unique<typename Schrodinger<Scalar>::Eigenfunction>(self, values(i).real(), coeffs)
             );
         }
         return eigenfunctions;
@@ -76,8 +76,8 @@ denseEigenpairs(const Schrodinger2D<Scalar> *self, Eigen::Index eigenvalueCount)
 
 #define SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, withEigenfunctions) \
 template \
-std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>> \
-denseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger2D<Scalar> *, Eigen::Index);
+std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> \
+denseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, Eigen::Index);
 
 #define SCHRODINGER_INSTANTIATE(Scalar) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, false) \

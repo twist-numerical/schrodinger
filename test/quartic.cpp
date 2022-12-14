@@ -89,9 +89,9 @@ TEST_CASE("Quartic potential", "[quartic>]") {
         INFO("c4 = " << problem.c4 << ", a = " << problem.a);
 
         double d = problem.domain;
-        Schrodinger2D<double> s(problem,
-                                Rectangle<double, 2>{-d, d, -d, d},
-                                Options{
+        Schrodinger<double> s(problem,
+                              Rectangle<double, 2>{-d, d, -d, d},
+                              Options{
                                         .gridSize={.x=30, .y=30},
                                         .maxBasisSize=18
                                 });

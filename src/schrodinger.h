@@ -25,7 +25,7 @@ namespace schrodinger {
     };
 
     template<typename Scalar>
-    class Schrodinger2D {
+    class Schrodinger {
     public:
         class Eigenfunction;
 
@@ -78,13 +78,13 @@ namespace schrodinger {
         isocpp_p0201::polymorphic_value<geometry::Domain<Scalar, 2>> domain;
         Options options;
 
-        Schrodinger2D(const Schrodinger2D &) = delete;
+        Schrodinger(const Schrodinger &) = delete;
 
-        Schrodinger2D &operator=(const Schrodinger2D &) = delete;
+        Schrodinger &operator=(const Schrodinger &) = delete;
 
-        Schrodinger2D(const std::function<Scalar(Scalar, Scalar)> &V,
-                      const geometry::Domain<Scalar, 2> &_domain,
-                      const Options &options = Options());
+        Schrodinger(const std::function<Scalar(Scalar, Scalar)> &V,
+                    const geometry::Domain<Scalar, 2> &_domain,
+                    const Options &options = Options());
 
         PerDirection<MatrixXs> Beta() const;
 
@@ -96,10 +96,10 @@ namespace schrodinger {
     };
 
     template<typename Scalar>
-    class Schrodinger2D<Scalar>::Eigenfunction {
+    class Schrodinger<Scalar>::Eigenfunction {
         class EigenfunctionTile;
 
-        const Schrodinger2D<Scalar> *problem;
+        const Schrodinger<Scalar> *problem;
         Scalar E;
         VectorXs c;
 
@@ -107,7 +107,7 @@ namespace schrodinger {
         std::vector<std::unique_ptr<EigenfunctionTile>> tiles;
         std::map<std::pair<int, int>, EigenfunctionTile *> tilesMap;
 
-        Eigenfunction(const Schrodinger2D<Scalar> *problem, Scalar E, const VectorXs &c);
+        Eigenfunction(const Schrodinger<Scalar> *problem, Scalar E, const VectorXs &c);
 
         Scalar operator()(Scalar x, Scalar y) const;
 

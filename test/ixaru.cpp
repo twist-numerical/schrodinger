@@ -14,9 +14,9 @@ const std::vector<double> expected{
 };
 
 TEST_CASE("Ixaru potential vertical", "[ixaru]") {
-    Schrodinger2D<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
-                            Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
-                            Options{
+    Schrodinger<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
+                          Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
+                          Options{
                                     .gridSize={.x=28, .y=30},
                                     .maxBasisSize=18
                             });
@@ -25,9 +25,9 @@ TEST_CASE("Ixaru potential vertical", "[ixaru]") {
 }
 
 TEST_CASE("Ixaru potential horizontal", "[ixaru]") {
-    Schrodinger2D<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
-                            Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
-                            Options{
+    Schrodinger<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
+                          Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
+                          Options{
                                     .gridSize={.x=30, .y=28},
                                     .maxBasisSize=18
                             });
@@ -36,10 +36,10 @@ TEST_CASE("Ixaru potential horizontal", "[ixaru]") {
 }
 
 TEST_CASE("Ixaru potential diamond", "[ixaru]") {
-    Schrodinger2D<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
-                            DomainTransform<double, 2>(Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
+    Schrodinger<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
+                          DomainTransform<double, 2>(Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
                                                        Rotation2D<double>(M_PI / 2)),
-                            Options{
+                          Options{
                                     .gridSize={.x=30, .y=30},
                                     .maxBasisSize=18
                             });
@@ -48,9 +48,9 @@ TEST_CASE("Ixaru potential diamond", "[ixaru]") {
 }
 
 TEST_CASE("Ixaru potential disc", "[ixaru]") {
-    Schrodinger2D<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
-                            Sphere<double, 2>(5.5),
-                            Options{
+    Schrodinger<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
+                          Sphere<double, 2>(5.5),
+                          Options{
                                     .gridSize={.x=30, .y=30},
                                     .maxBasisSize=18
                             });
@@ -62,7 +62,7 @@ TEST_CASE("Ixaru potential disc", "[ixaru]") {
 
 TEST_CASE("Ixaru potential long double", "[ixaru][long double]") {
     typedef long double Scalar;
-    Schrodinger2D<Scalar> s([](Scalar x, Scalar y) { return (1 + x * x) * (1 + y * y); },
+    Schrodinger<Scalar> s([](Scalar x, Scalar y) { return (1 + x * x) * (1 + y * y); },
                             Rectangle<Scalar, 2>(-5.5, 5.5, -5.5, 5.5),
                             Options{
                                     .gridSize={.x=35, .y=35},

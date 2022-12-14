@@ -1,4 +1,4 @@
-name: Build and test schrodinger2d
+name: Build and test schrodinger
 
 on: [ push ]
 

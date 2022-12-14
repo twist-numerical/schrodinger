@@ -9,9 +9,9 @@ const std::vector<double> expected{
 
 TEST_CASE("Harmonic potential", "[harmonic]") {
     Rectangle<double, 2> domain{-8.0, 8.0, -8.0, 8.0};
-    Schrodinger2D<double> s([](double x, double y) { return x * x + y * y; },
-                            domain,
-                            Options{
+    Schrodinger<double> s([](double x, double y) { return x * x + y * y; },
+                          domain,
+                          Options{
                                     .gridSize={.x=48, .y=48},
                                     .maxBasisSize=20
                             });
@@ -21,9 +21,9 @@ TEST_CASE("Harmonic potential", "[harmonic]") {
 
 TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
     Rectangle<double, 2> domain{-8.0, 8.0, -8.0, 8.0};
-    Schrodinger2D<double> s([](double x, double y) { return x * x + y * y; },
-                            domain,
-                            Options{
+    Schrodinger<double> s([](double x, double y) { return x * x + y * y; },
+                          domain,
+                          Options{
                                     .gridSize={.x=48, .y=48},
                                     .maxBasisSize=20,
                                     .sparse=true
@@ -36,7 +36,7 @@ TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
 
 TEST_CASE("Harmonic potential long double", "[harmonic][long double][sparse]") {
     typedef long double Scalar;
-    Schrodinger2D<Scalar> s([](Scalar x, Scalar y) { return x * x + y * y; },
+    Schrodinger<Scalar> s([](Scalar x, Scalar y) { return x * x + y * y; },
                             Rectangle<Scalar, 2>{-8.0, 8.0, -8.0, 8.0},
                             Options{
                                     .gridSize={.x=50, .y=50},
@@ -48,7 +48,7 @@ TEST_CASE("Harmonic potential long double", "[harmonic][long double][sparse]") {
 
 TEST_CASE("Sparse harmonic potential long double", "[harmonic][long double][sparse]") {
     typedef long double Scalar;
-    Schrodinger2D<Scalar> s([](Scalar x, Scalar y) { return x * x + y * y; },
+    Schrodinger<Scalar> s([](Scalar x, Scalar y) { return x * x + y * y; },
                             Rectangle<Scalar, 2>{-8.0, 8.0, -8.0, 8.0},
                             Options{
                                     .gridSize={.x=50, .y=50},

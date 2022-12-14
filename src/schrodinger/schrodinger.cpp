@@ -1,5 +1,5 @@
 #include "../util/polymorphic_value.h"
-#include "../schrodinger2d.h"
+#include "../schrodinger.h"
 #include "./eigenpairs.h"
 #include <map>
 #include <chrono>
@@ -30,7 +30,7 @@ public:
 };
 
 template<typename Scalar>
-typename Schrodinger2D<Scalar>::Thread
+typename Schrodinger<Scalar>::Thread
 computeThread(const std::function<Scalar(Scalar)> &V, Scalar min, Scalar max, size_t maxPairs,
               const Ref<const Array<Scalar, Dynamic, 1>> &grid, size_t &offset) {
     typedef IterateEigen<const Ref<const Array<Scalar, Dynamic, 1>>> Iterate;
@@ -40,7 +40,7 @@ computeThread(const std::function<Scalar(Scalar)> &V, Scalar min, Scalar max, si
         ++from;
 
     Index length = std::distance(from, std::lower_bound(from, Iterate(grid).end(), max));
-    typename Schrodinger2D<Scalar>::Thread thread = {
+    typename Schrodinger<Scalar>::Thread thread = {
             .value = 0,
             .valueIndex = 0,
             .offset = offset,
@@ -73,9 +73,9 @@ internal_linspaced(Index size, const Domain<Scalar, 2> *domain, const Matrix<Sca
 }
 
 template<typename Scalar>
-Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
-                                     const Domain<Scalar, 2> &_domain,
-                                     const Options &_options)
+Schrodinger<Scalar>::Schrodinger(const function<Scalar(Scalar, Scalar)> &V_,
+                                 const Domain<Scalar, 2> &_domain,
+                                 const Options &_options)
         : V(V_), domain(polymorphic_value<Domain<Scalar, 2>>(_domain.clone(), typename Domain<Scalar, 2>::copy{})),
           options(_options) {
     grid.x = internal_linspaced<Scalar>(options.gridSize.x, &*domain, Matrix<Scalar, 2, 1>::Unit(0));
@@ -237,15 +237,15 @@ Schrodinger2D<Scalar>::Schrodinger2D(const function<Scalar(Scalar, Scalar)> &V_,
 }
 
 template<typename Scalar>
-PerDirection<typename Schrodinger2D<Scalar>::MatrixXs>
-Schrodinger2D<Scalar>::Beta() const {
+PerDirection<typename Schrodinger<Scalar>::MatrixXs>
+Schrodinger<Scalar>::Beta() const {
     size_t rows = intersections.size();
 
     MatrixXs beta_x = MatrixXs::Zero(rows, columns.x);
     MatrixXs beta_y = MatrixXs::Zero(rows, columns.y);
 
     size_t row = 0;
-    for (const typename Schrodinger2D<Scalar>::Intersection &intersection: intersections) {
+    for (const typename Schrodinger<Scalar>::Intersection &intersection: intersections) {
         beta_x.row(row).segment(
                 intersection.thread.x->offset, intersection.thread.x->eigenpairs.size()
         ) = intersection.evaluation.x;
@@ -261,8 +261,8 @@ Schrodinger2D<Scalar>::Beta() const {
 }
 
 template<typename Scalar>
-PerDirection<typename Schrodinger2D<Scalar>::VectorXs>
-Schrodinger2D<Scalar>::Lambda() const {
+PerDirection<typename Schrodinger<Scalar>::VectorXs>
+Schrodinger<Scalar>::Lambda() const {
     VectorXs lambda_x(columns.x);
     VectorXs lambda_y(columns.y);
 
@@ -282,13 +282,13 @@ Schrodinger2D<Scalar>::Lambda() const {
 
 
 template<typename Scalar>
-std::vector<Scalar> Schrodinger2D<Scalar>::eigenvalues(int eigenvalueCount) const {
+std::vector<Scalar> Schrodinger<Scalar>::eigenvalues(int eigenvalueCount) const {
     return eigenpairs<Scalar, false>(this, eigenvalueCount);
 }
 
 template<typename Scalar>
-std::vector<std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>>
-Schrodinger2D<Scalar>::eigenfunctions(int eigenvalueCount) const {
+std::vector<std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>>
+Schrodinger<Scalar>::eigenfunctions(int eigenvalueCount) const {
     return eigenpairs<Scalar, true>(this, eigenvalueCount);
 }
 

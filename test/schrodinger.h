@@ -2,7 +2,7 @@
 #define SCHRODINGER2D_SCHRODINGER_H
 
 #include "catch.hpp"
-#include "../src/schrodinger2d.h"
+#include "../src/schrodinger.h"
 #include <vector>
 
 template<typename Scalar, typename T=Scalar>
@@ -20,7 +20,7 @@ template<typename Scalar, typename T=Scalar>
 inline void checkOrthogonality(
         const schrodinger::geometry::Domain<Scalar, 2> &domain,
         const std::vector<T> &expected,
-        const std::vector<std::pair<Scalar, std::unique_ptr<typename schrodinger::Schrodinger2D<Scalar>::Eigenfunction>>> &found,
+        const std::vector<std::pair<Scalar, std::unique_ptr<typename schrodinger::Schrodinger<Scalar>::Eigenfunction>>> &found,
         Scalar tolerance = 1e-8) {
     std::vector<Scalar> calculatedValues;
     calculatedValues.reserve(found.size());

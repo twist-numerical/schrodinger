@@ -32,7 +32,7 @@ public:
     Eigen::Index rows = 0;
     Eigen::Index cols = 0;
 
-    PermutedBeta(const Schrodinger2D<Scalar> *schrodinger, DirectionGetter direction) : permutation{
+    PermutedBeta(const Schrodinger<Scalar> *schrodinger, DirectionGetter direction) : permutation{
             Eigen::Index(schrodinger->intersections.size())} {
         auto &threads = direction(schrodinger->threads);
         leastSquares.reserve(threads.size());
@@ -294,8 +294,8 @@ public:
 #endif
 
 template<typename Scalar, bool withEigenfunctions>
-std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>>
-sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, Eigen::Index nev, bool shiftInvert) {
+std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>>
+sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool shiftInvert) {
     MATSLISE_SCOPED_TIMER("Sparse eigenpairs");
 
     if (nev < 0)
@@ -308,7 +308,7 @@ sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, Eigen::Index nev, boo
     PermutedBeta<Scalar> By{schrodinger, yDirection};
 
     Eigen::Index n = schrodinger->intersections.size();
-    std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>> result;
+    std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> result;
 
     SparseMatrix lstsq_x = Bx.lstsqMatrix();
     SparseMatrix lstsq_y = By.lstsqMatrix();
@@ -414,7 +414,7 @@ sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, Eigen::Index nev, boo
                 v.bottomRows(By.cols) = lstsq_y * vec.toEigen();
                 result.emplace_back(
                         value,
-                        std::make_unique<typename Schrodinger2D<Scalar>::Eigenfunction>(schrodinger, value, v)
+                        std::make_unique<typename Schrodinger<Scalar>::Eigenfunction>(schrodinger, value, v)
                 );
             } else {
                 result.emplace_back(value);
@@ -500,7 +500,7 @@ sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, Eigen::Index nev, boo
                 v.bottomRows(By.cols) = vy.col(i);
                 result.emplace_back(
                         eigenvalues(i).real(),
-                        std::make_unique<typename Schrodinger2D<Scalar>::Eigenfunction>(
+                        std::make_unique<typename Schrodinger<Scalar>::Eigenfunction>(
                                 schrodinger, eigenvalues(i).real(), v)
                 );
             } else {
@@ -523,8 +523,8 @@ sparseEigenpairs(const Schrodinger2D<Scalar> *schrodinger, Eigen::Index nev, boo
 
 #define SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, withEigenfunctions) \
 template \
-std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger2D<Scalar>::Eigenfunction>>, Scalar>> \
-sparseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger2D<Scalar> *, Eigen::Index, bool);
+std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> \
+sparseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, Eigen::Index, bool);
 
 #define SCHRODINGER_INSTANTIATE(Scalar) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, false) \

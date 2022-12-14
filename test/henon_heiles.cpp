@@ -13,7 +13,7 @@ std::vector<double> referenceHenonHeiles{
 TEST_CASE("Henon Heiles", "[henonheiles]") {
     int n = 30;
     int N = 15;
-    Schrodinger2D<double> s(
+    Schrodinger<double> s(
             [](double x, double y) { return x * x + y * y + sqrt(5) / 10 * (x * y * y - x * x * x / 3); },
             Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
             Options{
@@ -28,7 +28,7 @@ TEST_CASE("Henon Heiles", "[henonheiles]") {
 TEST_CASE("Sparse Henon Heiles", "[henonheiles][sparse]") {
     int n = 30;
     int N = 14;
-    Schrodinger2D<double> s(
+    Schrodinger<double> s(
             [](double x, double y) { return x * x + y * y + sqrt(5) / 10 * (x * y * y - x * x * x / 3); },
             Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
             Options{
@@ -119,7 +119,7 @@ TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation][slow]") {
     int n = 30;
     int N = 15;
 
-    Schrodinger2D<double> s(
+    Schrodinger<double> s(
             [](double x, double y) { return x * x + y * y + sqrt(5) / 10 * (x * y * y - x * x * x / 3); },
             Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
             Options{
@@ -130,8 +130,8 @@ TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation][slow]") {
     // Single eigenvalues
     auto eigenfunctions = s.eigenfunctions();
     // Sort eigenvalues
-    std::function<bool(std::pair<double, Schrodinger2D<double>::Eigenfunction>,
-                       std::pair<double, Schrodinger2D<double>::Eigenfunction>)> comp =
+    std::function<bool(std::pair<double, Schrodinger<double>::Eigenfunction>,
+                       std::pair<double, Schrodinger<double>::Eigenfunction>)> comp =
             [](auto a, auto b) { return a.first < b.first; };
 
     std::sort(eigenfunctions.begin(), eigenfunctions.end(), comp);
@@ -142,7 +142,7 @@ TEST_CASE("Henon Heiles interpolation", "[henonheilesinterpolation][slow]") {
     }
 
     for (int k = 0; k < (int) eigenfunctions.size(); k++) {
-        Schrodinger2D<double>::Eigenfunction ef = eigenfunctions[k].second;
+        Schrodinger<double>::Eigenfunction ef = eigenfunctions[k].second;
         assert(ef.functionValues.x.size() == ef.functionValues.y.size());
 
         VectorXd vx = ef.functionValues.x;

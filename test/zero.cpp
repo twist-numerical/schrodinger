@@ -14,9 +14,9 @@ const std::vector<double> expected_on_disc{
 };
 
 TEST_CASE("Zero potential on a disc", "[zero][disc]") {
-    Schrodinger2D<double> s([](double, double) { return 0; },
-                            Sphere<double, 2>({0, 0}, 1),
-                            Options{
+    Schrodinger<double> s([](double, double) { return 0; },
+                          Sphere<double, 2>({0, 0}, 1),
+                          Options{
                                     .gridSize={.x=40, .y=40},
                                     .maxBasisSize=20
                             });
@@ -29,9 +29,9 @@ TEST_CASE("Zero potential on a disc", "[zero][disc]") {
 TEST_CASE("Zero potential eigenfunction", "[zero]") {
     double pi = 3.14159265358;
     Rectangle<double, 2> domain{0., pi, 0., pi};
-    Schrodinger2D<double> s([](double, double) { return 0; },
-                            domain,
-                            Options{
+    Schrodinger<double> s([](double, double) { return 0; },
+                          domain,
+                          Options{
                                     .gridSize={.x=30, .y=30},
                                     .maxBasisSize=12
                             });
