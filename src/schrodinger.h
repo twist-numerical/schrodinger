@@ -8,23 +8,21 @@
 #include <optional>
 #include "domain.h"
 #include "util/polymorphic_value.h"
+#include "util/per_direction.h"
 
 namespace schrodinger {
-    template<class T>
-    struct PerDirection {
-        T x;
-        T y;
-    };
+    typedef Eigen::Index Index;
 
+    template<typename Scalar=double, Index dimension = 2>
     struct Options {
-        PerDirection<int> gridSize = {.x=11, .y=11};
+        PerDirection<int, dimension> gridSize = PerDirection<int, dimension>::filled(23);
         int maxBasisSize = 22;
         double pencilThreshold = 1e-8;
         bool sparse = false;
         bool shiftInvert = true;
     };
 
-    template<typename Scalar>
+    template<typename Scalar, Index dimension = 2>
     class Schrodinger {
     public:
         class Eigenfunction;
@@ -38,65 +36,66 @@ namespace schrodinger {
         struct Intersection;
 
         struct Thread {
-            Scalar value;
-            Eigen::Index valueIndex;
-            size_t offset;
-            Eigen::Index gridOffset;
-            Eigen::Index gridLength;
+            Index offset;
+            Index gridOffset;
+            Index gridLength;
             std::unique_ptr<matslise::Matslise<Scalar>> matslise;
             std::vector<std::pair<Scalar, std::unique_ptr<typename matslise::Matslise<Scalar>::Eigenfunction>>> eigenpairs;
             std::vector<Intersection *> intersections;
         };
 
-        struct Tile;
+        // struct Tile;
 
         struct Intersection {
-            size_t index; // index in the list of intersections
-            PerDirection<Scalar> position;
-            PerDirection<const Thread *> thread;
-            PerDirection<ArrayXs> evaluation;
+            Index index;
+            geometry::Vector<Scalar, dimension> position;
+            PerDirection<const Thread *, dimension> thread;
+            PerDirection<ArrayXs, dimension> evaluation;
             // [top-left, top-right, bottom-right, bottom-left]
-            std::array<Tile *, 4> tiles = {nullptr, nullptr, nullptr, nullptr};
+            // std::array<Tile *, 4> tiles = {nullptr, nullptr, nullptr, nullptr};
         };
 
         struct Tile {
-            std::pair<int, int> index;
-            geometry::Rectangle<Scalar, 2> bounds;
-            // [(xmax, ymin), (xmin,ymin), (xmin, ymax), (xmax, ymax)]
-            std::array<Intersection *, 4> intersections = {nullptr, nullptr, nullptr, nullptr};
+            std::array<int, dimension> index;
+            std::array<Intersection *, 1 << dimension> intersections;
+            geometry::Rectangle<Scalar, dimension> bounds;
+
             mutable std::optional<Eigen::Array<Scalar, interpolationGridSize - 2, interpolationGridSize - 2>> potential;
-            PerDirection<Eigen::Matrix<Scalar, interpolationGridSize, 1>> grid;
+            PerDirection<Eigen::Matrix<Scalar, interpolationGridSize, 1>, dimension> grid;
         };
 
-        PerDirection<ArrayXs> grid;
-        PerDirection<std::vector<Thread>> threads;
-        std::vector<Intersection> intersections;
+        PerDirection<ArrayXs, dimension> grid;
+        PerDirection<std::vector<std::unique_ptr<Thread>>, dimension> threads;
+        std::vector<std::unique_ptr<Intersection>> intersections;
         std::vector<Tile> tiles;
-        PerDirection<size_t> columns;
+        PerDirection<size_t, dimension> columns; // Total number of basisfunctions
 
-        std::function<Scalar(Scalar, Scalar)> V;
+        std::function<Scalar(const geometry::Vector<Scalar, dimension> &)> V;
         isocpp_p0201::polymorphic_value<geometry::Domain<Scalar, 2>> domain;
-        Options options;
+        Options<Scalar, dimension> options;
 
         Schrodinger(const Schrodinger &) = delete;
 
         Schrodinger &operator=(const Schrodinger &) = delete;
 
+        template<bool enable = true, typename=std::enable_if_t<enable && dimension == 2>>
         Schrodinger(const std::function<Scalar(Scalar, Scalar)> &V,
-                    const geometry::Domain<Scalar, 2> &_domain,
-                    const Options &options = Options());
+                    const geometry::Domain<Scalar, 2> &domain,
+                    const Options<Scalar, dimension> &options = Options<Scalar, dimension>()) :
+                Schrodinger([&V](const geometry::Vector<Scalar, 2> &xy) { return V(xy[0], xy[1]); }, domain,
+                            options) {};
 
-        PerDirection<MatrixXs> Beta() const;
-
-        PerDirection<VectorXs> Lambda() const;
+        Schrodinger(const std::function<Scalar(const geometry::Vector<Scalar, dimension> &)> &V,
+                    const geometry::Domain<Scalar, 2> &domain,
+                    const Options<Scalar, dimension> &options = Options<Scalar, dimension>());
 
         std::vector<Scalar> eigenvalues(int eigenvaluesCount = -1) const;
 
         std::vector<std::pair<Scalar, std::unique_ptr<Eigenfunction>>> eigenfunctions(int eigenvaluesCount = -1) const;
     };
 
-    template<typename Scalar>
-    class Schrodinger<Scalar>::Eigenfunction {
+    template<typename Scalar, Index dimension>
+    class Schrodinger<Scalar, dimension>::Eigenfunction {
         class EigenfunctionTile;
 
         const Schrodinger<Scalar> *problem;

@@ -16,10 +16,10 @@ const std::vector<double> expected_on_disc{
 TEST_CASE("Zero potential on a disc", "[zero][disc]") {
     Schrodinger<double> s([](double, double) { return 0; },
                           Sphere<double, 2>({0, 0}, 1),
-                          Options{
-                                    .gridSize={.x=40, .y=40},
-                                    .maxBasisSize=20
-                            });
+                          {
+                                  .gridSize={.x=40, .y=40},
+                                  .maxBasisSize=20
+                          });
 
     std::vector<double> eigenvalues = s.eigenvalues(10);
     REQUIRE(eigenvalues.size() == 10);
@@ -31,10 +31,10 @@ TEST_CASE("Zero potential eigenfunction", "[zero]") {
     Rectangle<double, 2> domain{0., pi, 0., pi};
     Schrodinger<double> s([](double, double) { return 0; },
                           domain,
-                          Options{
-                                    .gridSize={.x=30, .y=30},
-                                    .maxBasisSize=12
-                            });
+                          {
+                                  .gridSize={.x=30, .y=30},
+                                  .maxBasisSize=12
+                          });
 
     int total = 0;
     std::map<int, std::vector<std::pair<int, int>>> sumOfSquares;

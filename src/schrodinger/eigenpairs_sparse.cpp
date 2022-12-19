@@ -6,19 +6,17 @@
 
 using namespace schrodinger;
 
+template<Eigen::Index dimension>
 struct DirectionGetter {
-    bool getX;
+    Eigen::Index direction;
 
     template<typename T>
-    constexpr const T &operator()(const PerDirection<T> &p) {
-        return getX ? p.x : p.y;
+    constexpr const T &operator()(const PerDirection<T, dimension> &p) {
+        return p[direction];
     }
 };
 
-DirectionGetter xDirection{true};
-DirectionGetter yDirection{false};
-
-template<typename Scalar>
+template<typename Scalar, Eigen::Index dimension>
 class PermutedBeta {
 public:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXs;
@@ -32,7 +30,7 @@ public:
     Eigen::Index rows = 0;
     Eigen::Index cols = 0;
 
-    PermutedBeta(const Schrodinger<Scalar> *schrodinger, DirectionGetter direction) : permutation{
+    PermutedBeta(const Schrodinger<Scalar, dimension> *schrodinger, DirectionGetter<dimension> direction) : permutation{
             Eigen::Index(schrodinger->intersections.size())} {
         auto &threads = direction(schrodinger->threads);
         leastSquares.reserve(threads.size());
@@ -304,8 +302,8 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
     typedef Eigen::SparseMatrix<Scalar, Eigen::RowMajor> SparseMatrix;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorXs;
 
-    PermutedBeta<Scalar> Bx{schrodinger, xDirection};
-    PermutedBeta<Scalar> By{schrodinger, yDirection};
+    PermutedBeta<Scalar, 2> Bx{schrodinger, DirectionGetter<2>{0}};
+    PermutedBeta<Scalar, 2> By{schrodinger, DirectionGetter<2>{1}};
 
     Eigen::Index n = schrodinger->intersections.size();
     std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> result;

@@ -4,7 +4,7 @@ cmake_policy(SET CMP0077 NEW)
 
 set(SCHRODINGER_VERSION "0.0.1")
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # -fPIC needed for pybind
 set(BUILD_SHARED_LIBS ON)

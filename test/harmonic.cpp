@@ -11,10 +11,10 @@ TEST_CASE("Harmonic potential", "[harmonic]") {
     Rectangle<double, 2> domain{-8.0, 8.0, -8.0, 8.0};
     Schrodinger<double> s([](double x, double y) { return x * x + y * y; },
                           domain,
-                          Options{
-                                    .gridSize={.x=48, .y=48},
-                                    .maxBasisSize=20
-                            });
+                          Options<double, 2>{
+                                  .gridSize={.x=48ll, .y=48ll},
+                                  .maxBasisSize=20
+                          });
 
     checkOrthogonality(domain, expected, s.eigenfunctions(expected.size()), 1e-4);
 }
@@ -23,11 +23,11 @@ TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
     Rectangle<double, 2> domain{-8.0, 8.0, -8.0, 8.0};
     Schrodinger<double> s([](double x, double y) { return x * x + y * y; },
                           domain,
-                          Options{
-                                    .gridSize={.x=48, .y=48},
-                                    .maxBasisSize=20,
-                                    .sparse=true
-                            });
+                          Options<double, 2>{
+                                  .gridSize={.x=48, .y=48},
+                                  .maxBasisSize=20,
+                                  .sparse=true
+                          });
 
     checkOrthogonality(domain, expected, s.eigenfunctions(expected.size()), 1e-4);
 }

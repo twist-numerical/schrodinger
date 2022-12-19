@@ -16,7 +16,7 @@ TEST_CASE("Henon Heiles", "[henonheiles]") {
     Schrodinger<double> s(
             [](double x, double y) { return x * x + y * y + sqrt(5) / 10 * (x * y * y - x * x * x / 3); },
             Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
-            Options{
+            Options<double, 2>{
                     .gridSize={.x=n, .y=n},
                     .maxBasisSize=N,
             });
@@ -31,7 +31,7 @@ TEST_CASE("Sparse Henon Heiles", "[henonheiles][sparse]") {
     Schrodinger<double> s(
             [](double x, double y) { return x * x + y * y + sqrt(5) / 10 * (x * y * y - x * x * x / 3); },
             Rectangle<double, 2>{-6.0, 6.0, -6.0, 6.0},
-            Options{
+            Options<double, 2>{
                     .gridSize={.x=n, .y=n},
                     .maxBasisSize=N,
                     .sparse=true

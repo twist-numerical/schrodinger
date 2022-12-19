@@ -91,10 +91,10 @@ TEST_CASE("Quartic potential", "[quartic>]") {
         double d = problem.domain;
         Schrodinger<double> s(problem,
                               Rectangle<double, 2>{-d, d, -d, d},
-                              Options{
-                                        .gridSize={.x=30, .y=30},
-                                        .maxBasisSize=18
-                                });
+                              {
+                                      .gridSize={.x=30, .y=30},
+                                      .maxBasisSize=18
+                              });
 
         checkEigenvalues<double>(pe.second, s.eigenvalues(pe.second.size()), 1e-6);
     }

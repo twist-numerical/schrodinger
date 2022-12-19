@@ -34,8 +34,8 @@ reconstructEigenfunction(const typename Schrodinger<Scalar>::Thread *t, const Re
     return r;
 }
 
-template<typename Scalar>
-class Schrodinger<Scalar>::Eigenfunction::EigenfunctionTile {
+template<typename Scalar, Index dimension>
+class Schrodinger<Scalar, dimension>::Eigenfunction::EigenfunctionTile {
 public:
     static constexpr int size = interpolationGridSize;
 
