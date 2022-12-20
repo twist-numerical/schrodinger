@@ -15,7 +15,9 @@ else ()
     add_compile_options(-Wall -Wextra -Wno-missing-field-initializers)
 endif ()
 
-SET(SCHRODINGER_SRC src/schrodinger/eigenfunction.cpp src/schrodinger/schrodinger.cpp src/schrodinger/eigenpairs_dense.cpp src/schrodinger/eigenpairs_sparse.cpp)
+SET(SCHRODINGER_SRC
+        # src/schrodinger/eigenfunction.cpp
+        src/schrodinger/schrodinger.cpp src/schrodinger/eigenpairs_dense.cpp src/schrodinger/eigenpairs_sparse.cpp)
 
 add_library(schrodinger ${SCHRODINGER_SRC})
 
@@ -102,7 +104,7 @@ if (SCHRODINGER_PYTHON)
         configure_file(src/python/description.md description.md NEWLINE_STYLE LF)
 
         add_custom_target(install_schrodinger_py
-                COMMAND ${CMAKE_COMMAND} -E env SCHRODINGER_LIBRARY="$<TARGET_FILE:schrodinger_py>"
+                COMMAND ${CMAKE_COMMAND} -E env SCHRODINGER_LIBRARY= "$<TARGET_FILE:schrodinger_py>"
                 ${PYTHON_EXECUTABLE} -m pip install --upgrade --ignore-installed .
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         add_dependencies(install_schrodinger_py schrodinger_py)

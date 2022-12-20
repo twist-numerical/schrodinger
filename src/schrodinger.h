@@ -56,18 +56,18 @@ namespace schrodinger {
         };
 
         struct Tile {
-            std::array<int, dimension> index;
+            PerDirection<Index, dimension> index;
             std::array<Intersection *, 1 << dimension> intersections;
             geometry::Rectangle<Scalar, dimension> bounds;
 
             mutable std::optional<Eigen::Array<Scalar, interpolationGridSize - 2, interpolationGridSize - 2>> potential;
-            PerDirection<Eigen::Matrix<Scalar, interpolationGridSize, 1>, dimension> grid;
+            PerDirection<Eigen::Array<Scalar, interpolationGridSize, 1>, dimension> grid;
         };
 
         PerDirection<ArrayXs, dimension> grid;
         PerDirection<std::vector<std::unique_ptr<Thread>>, dimension> threads;
         std::vector<std::unique_ptr<Intersection>> intersections;
-        std::vector<Tile> tiles;
+        std::vector<std::unique_ptr<Tile>> tiles;
         PerDirection<size_t, dimension> columns; // Total number of basisfunctions
 
         std::function<Scalar(const geometry::Vector<Scalar, dimension> &)> V;
@@ -106,7 +106,7 @@ namespace schrodinger {
         std::vector<std::unique_ptr<EigenfunctionTile>> tiles;
         std::map<std::pair<int, int>, EigenfunctionTile *> tilesMap;
 
-        Eigenfunction(const Schrodinger<Scalar> *problem, Scalar E, const VectorXs &c);
+        Eigenfunction(const Schrodinger<Scalar> *problem, Scalar E, const PerDirection<VectorXs, dimension> &c);
 
         Scalar operator()(Scalar x, Scalar y) const;
 

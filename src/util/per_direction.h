@@ -42,8 +42,8 @@ namespace schrodinger {
             return derived().data()[i];
         }
 
-        operator Eigen::Matrix<Type, dimension, 0>() const {
-            return Eigen::Map<Eigen::Matrix<Type, dimension, 0>>(derived().data());
+        Eigen::Array<Type, dimension, 1> toEigen() const {
+            return Eigen::Map<const Eigen::Array<Type, dimension, 1>>(derived().data());
         }
     };
 

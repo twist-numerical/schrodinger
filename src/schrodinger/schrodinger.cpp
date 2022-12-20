@@ -141,7 +141,44 @@ Schrodinger<Scalar, dimension>::Schrodinger(const function<Scalar(const geometry
         columns[i] = unknownsOffset;
     }
 
+    {
+        TensorIndexer<dimension> tileIndexer{options.gridSize.toEigen() + 1};
+        TensorIndexer<dimension> twoIndexer{Eigen::Matrix<Index, dimension, 1>::Constant(2)};
 
+        geometry::Rectangle<Scalar, dimension> bounds;
+        for (Index i = 0; i < dimension; ++i) {
+            bounds.min(i) = grid[i][0];
+            bounds.max(i) = grid[i][grid[i].size() - 1];
+        }
+
+        tiles.resize(tileIndexer.totalSize());
+        tileIndexer.forEach([&](const auto &index) {
+            Tile &tile = *tiles[tileIndexer(index)];
+            tile.index = index;
+            tile.bounds = bounds;
+        });
+
+        indexer.forEach([&](const auto &multiIndex) {
+            Intersection *intersection = intersections[indexer(multiIndex)].get();
+            twoIndexer.forEach([&](auto two_index) {
+                Tile &tile = *tiles[tileIndexer(multiIndex.toEigen() + 1 - two_index.toEigen())];
+                tile.intersections[twoIndexer(two_index.toEigen())] = intersection;
+
+                for (Index i = 0; i < dimension; ++i) {
+                    if (two_index[i] == 0)
+                        tile.bounds.min(i) = intersection->position[i];
+                    else
+                        tile.bounds.max(i) = intersection->position[i];
+                }
+            });
+        });
+
+        for (auto &tile: tiles) {
+            for (Index i = 0; i < dimension; ++i)
+                tile->grid[i] = Eigen::Array<Scalar, interpolationGridSize, 1>::LinSpaced(
+                        interpolationGridSize, tile->bounds.min(i), tile->bounds.max(i));
+        }
+    }
 
 
     {

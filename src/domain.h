@@ -176,6 +176,22 @@ namespace schrodinger::geometry {
             return bounds_[2 * axis + 1];
         }
 
+        Scalar &min(int axis) {
+            return bounds_[2 * axis];
+        }
+
+        Scalar &max(int axis) {
+            return bounds_[2 * axis + 1];
+        }
+
+        const Scalar &min(int axis) const {
+            return bounds_[2 * axis];
+        }
+
+        const Scalar &max(int axis) const {
+            return bounds_[2 * axis + 1];
+        }
+
         virtual bool contains(const Vector<Scalar, d> &point) const override {
             for (int i = 0; i < d; ++i)
                 if (point[i] <= bounds_[2 * i] || point[i] >= bounds_[2 * i + 1])

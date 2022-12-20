@@ -30,7 +30,8 @@ namespace schrodinger {
             return m_totalSize;
         }
 
-        Index operator()(const PerDirection<Index, dimension> &index) const {
+        template<typename Indexable>
+        Index operator()(const Indexable &index) const {
             Index r;
             for (Index i = 0; i < dimension; ++i)
                 r += m_strides[i] * index[i];

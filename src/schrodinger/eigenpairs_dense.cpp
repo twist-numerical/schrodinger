@@ -40,13 +40,13 @@ PerDirection<Eigen::Matrix<Scalar, Eigen::Dynamic, 1>, 2> computeLambda(const Sc
     lambda.y = VectorXs(self->columns.y);
 
     for (const auto &x: self->threads.x) {
-        Eigen::Index offset = x.offset;
-        for (const auto &ef: x.eigenpairs)
+        Eigen::Index offset = x->offset;
+        for (const auto &ef: x->eigenpairs)
             lambda.x(offset++) = ef.first;
     }
     for (const auto &y: self->threads.y) {
-        Eigen::Index offset = y.offset;
-        for (const auto &ef: y.eigenpairs)
+        Eigen::Index offset = y->offset;
+        for (const auto &ef: y->eigenpairs)
             lambda.y(offset++) = ef.first;
     }
 
@@ -104,10 +104,12 @@ denseEigenpairs(const Schrodinger<Scalar> *self, Eigen::Index eigenvalueCount) {
         eigenfunctions.reserve(indices.size());
         for (int i: indices) {
             VectorXs coeffs = kernel * vectors.col(i).real();
-
+            PerDirection<VectorXs, 2> coef;
+            coef.x = coeffs.topRows(colsX);
+            coef.y = coeffs.bottomRows(colsY);
             eigenfunctions.emplace_back(
                     values(i).real(),
-                    std::make_unique<typename Schrodinger<Scalar>::Eigenfunction>(self, values(i).real(), coeffs)
+                    std::make_unique<typename Schrodinger<Scalar>::Eigenfunction>(self, values(i).real(), coef)
             );
         }
         return eigenfunctions;
@@ -126,7 +128,7 @@ template \
 std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> \
 denseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, Eigen::Index);
 
-#define SCHRODINGER_INSTANTIATE(Scalar) \
+#define SCHRODINGER_INSTANTIATE(Scalar, dimension) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, false) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, true)
 

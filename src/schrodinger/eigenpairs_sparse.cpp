@@ -6,55 +6,47 @@
 
 using namespace schrodinger;
 
-template<Eigen::Index dimension>
-struct DirectionGetter {
-    Eigen::Index direction;
-
-    template<typename T>
-    constexpr const T &operator()(const PerDirection<T, dimension> &p) {
-        return p[direction];
-    }
-};
-
-template<typename Scalar, Eigen::Index dimension>
+template<typename Scalar, Index dimension>
 class PermutedBeta {
 public:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXs;
     typedef Eigen::SparseMatrix<Scalar, Eigen::RowMajor> SparseMatrix;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorXs;
 
-    Eigen::PermutationMatrix<Eigen::Dynamic> permutation;
-    std::vector<MatrixXs> leastSquares;
-    std::vector<MatrixXs> blocks;
-    std::vector<MatrixXs> fullBlocks;
-    Eigen::Index rows = 0;
-    Eigen::Index cols = 0;
+    Eigen::PermutationMatrix<Eigen::Dynamic> permutation{};
+    std::vector<MatrixXs> leastSquares{};
+    std::vector<MatrixXs> blocks{};
+    std::vector<MatrixXs> fullBlocks{};
+    Index rows = 0;
+    Index cols = 0;
 
-    PermutedBeta(const Schrodinger<Scalar, dimension> *schrodinger, DirectionGetter<dimension> direction) : permutation{
+    PermutedBeta() {}
+
+    PermutedBeta(const Schrodinger<Scalar, dimension> *schrodinger, Index direction) : permutation{
             Eigen::Index(schrodinger->intersections.size())} {
-        auto &threads = direction(schrodinger->threads);
+        auto &threads = schrodinger->threads[direction];
         leastSquares.reserve(threads.size());
         fullBlocks.reserve(threads.size());
         blocks.reserve(threads.size());
         Eigen::Index pIndex = 0;
         for (auto &thread: threads) {
-            for (auto intersection: thread.intersections)
+            for (auto intersection: thread->intersections)
                 permutation.indices()(intersection->index) = pIndex++;
 
-            Eigen::Index m = thread.intersections.size();
-            Eigen::Index n = thread.eigenpairs.size();
+            Eigen::Index m = thread->intersections.size();
+            Eigen::Index n = thread->eigenpairs.size();
             rows += m;
             cols += n;
             MatrixXs B(m, n);
             {
                 Eigen::Index i = 0;
-                for (auto intersection: thread.intersections)
-                    B.row(i++) = direction(intersection->evaluation);
+                for (auto intersection: thread->intersections)
+                    B.row(i++) = intersection->evaluation[direction];
             }
             VectorXs lambda(n);
             {
                 Eigen::Index i = 0;
-                for (auto &ef: thread.eigenpairs)
+                for (auto &ef: thread->eigenpairs)
                     lambda(i++) = std::get<0>(ef);
             }
 
@@ -291,9 +283,9 @@ public:
 
 #endif
 
-template<typename Scalar, bool withEigenfunctions>
+template<typename Scalar, Index dimension, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>>
-sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool shiftInvert) {
+sparseEigenpairs(const Schrodinger<Scalar, dimension> *schrodinger, Eigen::Index nev, bool shiftInvert) {
     MATSLISE_SCOPED_TIMER("Sparse eigenpairs");
 
     if (nev < 0)
@@ -302,14 +294,15 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
     typedef Eigen::SparseMatrix<Scalar, Eigen::RowMajor> SparseMatrix;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorXs;
 
-    PermutedBeta<Scalar, 2> Bx{schrodinger, DirectionGetter<2>{0}};
-    PermutedBeta<Scalar, 2> By{schrodinger, DirectionGetter<2>{1}};
+    PerDirection<PermutedBeta<Scalar, dimension>, dimension> beta;
+    for (Index i = 0; i < dimension; ++i)
+        beta[i] = {schrodinger, i};
 
     Eigen::Index n = schrodinger->intersections.size();
     std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> result;
 
-    SparseMatrix lstsq_x = Bx.lstsqMatrix();
-    SparseMatrix lstsq_y = By.lstsqMatrix();
+    // SparseMatrix lstsq_x = Bx.lstsqMatrix();
+    // SparseMatrix lstsq_y = By.lstsqMatrix();
 
 #ifdef SCHRODINGER_SLEPC
     SLEPcMatrix A{Bx.fullMatrix() + By.fullMatrix()};
@@ -425,12 +418,15 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
 
     Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, 1> eigenvalues;
     Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, Eigen::Dynamic> eigenvectors;
+
+    SparseMatrix A = beta[0].fullMatrix();
+    for (Index i = 1; i < dimension; ++i)
+        A += beta[i].fullMatrix();
     if (shiftInvert) {
         MATSLISE_SCOPED_TIMER("SPECTRA shift invert");
-
-        ShiftInvertDeflateSolveOperator<Scalar> op(Bx.fullMatrix() + By.fullMatrix());
-        op.add_deflation(Bx.lstsqNullSpace());
-        op.add_deflation(By.lstsqNullSpace());
+        ShiftInvertDeflateSolveOperator<Scalar> op(A);
+        for (Index i = 0; i < dimension; ++i)
+            op.add_deflation(beta[i].lstsqNullSpace());
         Spectra::GenEigsRealShiftSolver<decltype(op)> eigenSolver(op, nev, std::min(2 * nev + 1, n), sigma);
 
         {
@@ -451,9 +447,9 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
 
     } else {
         MATSLISE_SCOPED_TIMER("SPECTRA select smallest");
-        ShiftDeflateSolveOperator<Scalar> op(Bx.fullMatrix() + By.fullMatrix(), sigma);
-        op.add_deflation(Bx.lstsqNullSpace());
-        op.add_deflation(By.lstsqNullSpace());
+        ShiftDeflateSolveOperator<Scalar> op(A, sigma);
+        for (Index i = 0; i < dimension; ++i)
+            op.add_deflation(beta[i].lstsqNullSpace());
         Spectra::GenEigsSolver<decltype(op)> eigenSolver(op, nev, std::min(2 * nev + 1, n));
 
         {
@@ -464,14 +460,14 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
         {
 
             MATSLISE_SCOPED_TIMER("SPECTRA compute");
-            eigenSolver.compute(Spectra::EigenvalueSorter<std::complex<Scalar>>
-                                        {
-                                                [](const std::complex<Scalar> &r) {
-                                                    if (r.real() < 1 || abs(r.imag()) > 1)
-                                                        return Eigen::NumTraits<Scalar>::infinity();
-                                                    return r.real();
-                                                }
-                                        }, 1000, 1e-10, Spectra::SortRule::SmallestReal);
+            eigenSolver.compute(Spectra::EigenvalueSorter < std::complex<Scalar>>
+            {
+                [](const std::complex<Scalar> &r) {
+                    if (r.real() < 1 || abs(r.imag()) > 1)
+                        return Eigen::NumTraits<Scalar>::infinity();
+                    return r.real();
+                }
+            }, 1000, 1e-10, Spectra::SortRule::SmallestReal);
             eigenvalues = eigenSolver.eigenvalues();
             eigenvalues.array() += sigma;
             eigenvectors = eigenSolver.eigenvectors();
@@ -481,30 +477,26 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
             throw std::runtime_error("The eigensolver did not find success...");
     }
 
-    {
+    if constexpr (withEigenfunctions) {
         MATSLISE_SCOPED_TIMER(withEigenfunctions ? "Collect eigenfunctions" : "Collect eigenvalues");
-        MatrixXs vx = lstsq_x * eigenvectors.real();
-        MatrixXs vy = lstsq_y * eigenvectors.real();
 
-        /*
-        VectorXs norms = (Bx.asMatrix() * vx - By.asMatrix() * vy).colwise().norm();
-        VectorXs norm2s = (Bx.asMatrix() * vx + By.asMatrix() * vy).colwise().norm();
-         */
+        PerDirection<MatrixXs, dimension> v;
+        for (Index i = 0; i < dimension; ++i)
+            v[i] = beta[i].lstsqMatrix() * eigenvectors.real();
 
         for (Eigen::Index i = 0; i < eigenvalues.size(); ++i) {
-            if constexpr (withEigenfunctions) {
-                VectorXs v(Bx.cols + By.cols);
-                v.topRows(Bx.cols) = vx.col(i);
-                v.bottomRows(By.cols) = vy.col(i);
-                result.emplace_back(
-                        eigenvalues(i).real(),
-                        std::make_unique<typename Schrodinger<Scalar>::Eigenfunction>(
-                                schrodinger, eigenvalues(i).real(), v)
-                );
-            } else {
-                result.emplace_back(eigenvalues(i).real());
-            }
+            PerDirection<VectorXs, dimension> coeffs;
+            for (Index d = 0; d < dimension; ++d)
+                coeffs[d] = v[d].col(i);
+            result.emplace_back(
+                    eigenvalues(i).real(),
+                    std::make_unique<typename Schrodinger<Scalar>::Eigenfunction>(
+                            schrodinger, eigenvalues(i).real(), coeffs)
+            );
         }
+    } else {
+        for (Eigen::Index i = 0; i < eigenvalues.size(); ++i)
+            result.emplace_back(eigenvalues(i).real());
     }
 
 #endif
@@ -519,13 +511,13 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
     return result;
 }
 
-#define SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, withEigenfunctions) \
+#define SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, dimension, withEigenfunctions) \
 template \
-std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> \
-sparseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, Eigen::Index, bool);
+std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar, dimension>::Eigenfunction>>, Scalar>> \
+sparseEigenpairs<Scalar, dimension, withEigenfunctions>(const Schrodinger<Scalar> *, Eigen::Index, bool);
 
-#define SCHRODINGER_INSTANTIATE(Scalar) \
-SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, false) \
-SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, true)
+#define SCHRODINGER_INSTANTIATE(Scalar, dimension) \
+SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, dimension, false) \
+SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, dimension, true)
 
 #include "instantiate.h"
