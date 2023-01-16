@@ -433,7 +433,7 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
         ShiftInvertDeflateSolveOperator<Scalar> op(Bx.fullMatrix() + By.fullMatrix());
         op.add_deflation(Bx.lstsqNullSpace());
         op.add_deflation(By.lstsqNullSpace());
-        Spectra::GenEigsRealShiftSolver<decltype(op)> eigenSolver(op, nev, std::min(3 * nev + 1, n), sigma);
+        Spectra::GenEigsRealShiftSolver<decltype(op)> eigenSolver(op, nev, std::min(3 * nev + 7, n), sigma);
 
         {
             MATSLISE_SCOPED_TIMER("SPECTRA init");
