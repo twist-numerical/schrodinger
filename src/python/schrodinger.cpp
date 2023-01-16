@@ -66,7 +66,7 @@ PYBIND11_MODULE(schrodinger, m) {
     perDirection<Schrodinger<double>::MatrixXs>(m, "PerDirectionMatrixXs");
     perDirection<Schrodinger<double>::VectorXs>(m, "PerDirectionVectorXs");
 
-    py::class_<Schrodinger<double>, std::shared_ptr<Schrodinger<double>>>(m, "Schrodinger")
+    py::class_<Schrodinger<double>, std::shared_ptr<Schrodinger<double>>>(m, "Schrodinger2D")
             .def(py::init(
                          [](const std::function<double(double, double)> &V, const Domain<double, 2> &domain,
                             const std::array<int, 2> &gridSize, int maxBasisSize, bool sparse) {
@@ -91,7 +91,7 @@ Calculate the first k eigenvalues.
 >>> import numpy as np
 >>> from math import pi
 >>> r = Rectangle(0, pi, 0, pi)
->>> s = Schrodinger(lambda x, y: 0, r)
+>>> s = Schrodinger2D(lambda x, y: 0, r)
 >>> np.array(s.eigenvalues(9)[:9]).round(6)
 array([ 2.,  5.,  5.,  8., 10., 10., 13., 13., 17.])
 )"""")
@@ -124,7 +124,7 @@ Calculate the first k eigenvalues with corresponding eigenfunctions.
 >>> import numpy as np
 >>> from math import pi
 >>> r = Rectangle(-9.5, 9.5, -9.5, 9.5)
->>> s = Schrodinger(lambda x, y: x * x + y * y, r, gridSize=(45,45), maxBasisSize=21)
+>>> s = Schrodinger2D(lambda x, y: x * x + y * y, r, gridSize=(45,45), maxBasisSize=21)
 >>> eigenvalues, eigenfunctions = zip(*s.eigenfunctions(9))
 >>> np.array(eigenvalues[:9]).round(6)
 array([2., 4., 4., 6., 6., 6., 8., 8., 8.])
