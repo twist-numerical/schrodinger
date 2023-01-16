@@ -12,9 +12,9 @@ TEST_CASE("Harmonic potential", "[harmonic]") {
     Schrodinger<double> s([](double x, double y) { return x * x + y * y; },
                           domain,
                           Options{
-                                    .gridSize={.x=48, .y=48},
-                                    .maxBasisSize=20
-                            });
+                                  .gridSize={.x=48, .y=48},
+                                  .maxBasisSize=20
+                          });
 
     checkOrthogonality(domain, expected, s.eigenfunctions(expected.size()), 1e-4);
 }
@@ -24,10 +24,23 @@ TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
     Schrodinger<double> s([](double x, double y) { return x * x + y * y; },
                           domain,
                           Options{
-                                    .gridSize={.x=48, .y=48},
-                                    .maxBasisSize=20,
-                                    .sparse=true
-                            });
+                                  .gridSize={.x=48, .y=48},
+                                  .maxBasisSize=20,
+                                  .sparse=true
+                          });
+
+    checkOrthogonality(domain, expected, s.eigenfunctions(expected.size()), 1e-4);
+}
+
+TEST_CASE("Sparse harmonic potential, large grid", "[harmonic][sparse][slow]") {
+    Rectangle<double, 2> domain{-9.5, 9.5, -9.5, 9.5};
+    Schrodinger<double> s([](double x, double y) { return x * x + y * y; },
+                          domain,
+                          Options{
+                                  .gridSize={.x=64, .y=64},
+                                  .maxBasisSize=32,
+                                  .sparse=true
+                          });
 
     checkOrthogonality(domain, expected, s.eigenfunctions(expected.size()), 1e-4);
 }
