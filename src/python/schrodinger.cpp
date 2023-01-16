@@ -69,16 +69,19 @@ PYBIND11_MODULE(schrodinger, m) {
     py::class_<Schrodinger<double>, std::shared_ptr<Schrodinger<double>>>(m, "Schrodinger2D")
             .def(py::init(
                          [](const std::function<double(double, double)> &V, const Domain<double, 2> &domain,
-                            const std::array<int, 2> &gridSize, int maxBasisSize, bool sparse, bool shiftInvert) {
+                            const std::array<int, 2> &gridSize, int maxBasisSize, bool sparse, bool shiftInvert,
+                            int ncvFactor) {
                              py::gil_scoped_release release;
                              return std::make_shared<Schrodinger<double>>(V, domain, (Options) {
                                      .gridSize = {.x = gridSize[0], .y=gridSize[1]},
                                      .maxBasisSize=maxBasisSize,
                                      .sparse=sparse,
-                                     .shiftInvert=shiftInvert
+                                     .shiftInvert=shiftInvert,
+                                     .ncvFactor=ncvFactor,
                              });
                          }), py::arg("V"), py::arg("domain"), py::arg("gridSize") = std::array<int, 2>{21, 21},
-                 py::arg("maxBasisSize") = 16, py::arg("sparse") = true, py::arg("shift_invert") = true)
+                 py::arg("maxBasisSize") = 16, py::arg("sparse") = true, py::arg("shiftInvert") = true,
+                 py::arg("ncvFactor") = 4)
             .def("eigenvalues", [](std::shared_ptr<const Schrodinger<double>> s, int eigenvalueCount) {
                 py::gil_scoped_release release;
                 return s->eigenvalues(eigenvalueCount);

@@ -12,15 +12,18 @@ denseEigenpairs(const schrodinger::Schrodinger<Scalar> *self, Eigen::Index eigen
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename schrodinger::Schrodinger<Scalar>::Eigenfunction>>, Scalar>>
-sparseEigenpairs(const schrodinger::Schrodinger<Scalar> *self, Eigen::Index eigenvalueCount, bool shiftInvert);
+sparseEigenpairs(const schrodinger::Schrodinger<Scalar> *self, Eigen::Index eigenvalueCount,
+                 bool shiftInvert, double ncvFactor);
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename schrodinger::Schrodinger<Scalar>::Eigenfunction>>, Scalar>>
 eigenpairs(const schrodinger::Schrodinger<Scalar> *self, Eigen::Index eigenvalueCount) {
     if (self->options.sparse)
-        return sparseEigenpairs<Scalar, withEigenfunctions>(self, eigenvalueCount, self->options.shiftInvert);
+        return sparseEigenpairs<Scalar, withEigenfunctions>(
+                self, eigenvalueCount, self->options.shiftInvert, self->options.ncvFactor);
     else
-        return denseEigenpairs<Scalar, withEigenfunctions>(self, eigenvalueCount);
+        return denseEigenpairs<Scalar, withEigenfunctions>(
+                self, eigenvalueCount);
 }
 
 #endif //SCHRODINGER_EIGENPAIRS_H

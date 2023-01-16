@@ -22,6 +22,7 @@ namespace schrodinger {
         double pencilThreshold = 1e-8;
         bool sparse = false;
         bool shiftInvert = true;
+        double ncvFactor = 4;
     };
 
     template<typename Scalar>

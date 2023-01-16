@@ -295,7 +295,7 @@ public:
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>>
-sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool shiftInvert) {
+sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool shiftInvert, double ncvFactor) {
     MATSLISE_SCOPED_TIMER("Sparse eigenpairs");
 
     if (nev < 0)
@@ -424,6 +424,7 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
 #else
     // To do: make sure sigma is lower bound!
     Scalar sigma = -1;
+    Eigen::Index ncv = std::min((Eigen::Index) (ncvFactor * (double) nev) + 1, n);
 
     Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, 1> eigenvalues;
     Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, Eigen::Dynamic> eigenvectors;
@@ -433,7 +434,7 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
         ShiftInvertDeflateSolveOperator<Scalar> op(Bx.fullMatrix() + By.fullMatrix());
         op.add_deflation(Bx.lstsqNullSpace());
         op.add_deflation(By.lstsqNullSpace());
-        Spectra::GenEigsRealShiftSolver<decltype(op)> eigenSolver(op, nev, std::min(3 * nev + 7, n), sigma);
+        Spectra::GenEigsRealShiftSolver<decltype(op)> eigenSolver(op, nev, ncv, sigma);
 
         {
             MATSLISE_SCOPED_TIMER("SPECTRA init");
@@ -456,7 +457,7 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
         ShiftDeflateSolveOperator<Scalar> op(Bx.fullMatrix() + By.fullMatrix(), sigma);
         op.add_deflation(Bx.lstsqNullSpace());
         op.add_deflation(By.lstsqNullSpace());
-        Spectra::GenEigsSolver<decltype(op)> eigenSolver(op, nev, std::min(2 * nev + 1, n));
+        Spectra::GenEigsSolver<decltype(op)> eigenSolver(op, nev, ncv);
 
         {
             MATSLISE_SCOPED_TIMER("SPECTRA init");
@@ -524,7 +525,7 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
 #define SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, withEigenfunctions) \
 template \
 std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> \
-sparseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, Eigen::Index, bool);
+sparseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, Eigen::Index, bool, double);
 
 #define SCHRODINGER_INSTANTIATE(Scalar) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, false) \
