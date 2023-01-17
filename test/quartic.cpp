@@ -96,12 +96,8 @@ TEST_CASE("Quartic potential", "[quartic>]") {
                                         .maxBasisSize=18
                                 });
 
-        checkEigenvalues<double>(pe.second, s.eigenvalues(pe.second.size()), 1e-6);
+        checkEigenvalues<double>(pe.second, s.eigenvalues(EigensolverOptions{
+                .k = (Eigen::Index) pe.second.size()
+        }), 1e-6);
     }
 }
-
-
-#ifdef SCHRODINGER_LONG_DOUBLE
-
-
-#endif

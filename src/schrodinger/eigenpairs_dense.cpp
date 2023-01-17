@@ -8,7 +8,7 @@ using namespace schrodinger;
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>>
-denseEigenpairs(const Schrodinger<Scalar> *self, Eigen::Index eigenvalueCount) {
+denseEigenpairs(const Schrodinger<Scalar> *self, const EigensolverOptions &options) {
     using MatrixXs = typename Schrodinger<Scalar>::MatrixXs;
     using VectorXs = typename Schrodinger<Scalar>::VectorXs;
 
@@ -36,17 +36,20 @@ denseEigenpairs(const Schrodinger<Scalar> *self, Eigen::Index eigenvalueCount) {
     RectangularPencil<withEigenfunctions, MatrixXs> pencil(A, BK, self->options.pencilThreshold);
 
     const auto &values = pencil.eigenvalues();
-    if (eigenvalueCount < 0 || eigenvalueCount > values.size())
-        eigenvalueCount = values.size();
+    validate_argument([&]() {
+        return options.k > 0 && options.k < values.size();
+    }, [&](auto &message) {
+        message << "The number of eigenvalues k should be strictly positive and less than " << values.size() << ".";
+    });
 
     std::vector<int> indices(values.size());
     std::iota(indices.begin(), indices.end(), 0);
-    std::partial_sort(indices.begin(), indices.begin() + eigenvalueCount, indices.end(), [&values](int a, int b) {
+    std::partial_sort(indices.begin(), indices.begin() + options.k, indices.end(), [&values](int a, int b) {
         if (std::abs(values(b).imag()) > 1e-8) return true;
         if (std::abs(values(a).imag()) > 1e-8) return false;
         return values(a).real() < values(b).real();
     });
-    indices.resize(eigenvalueCount);
+    indices.resize(options.k);
 
     if constexpr(withEigenfunctions) {
         const auto &vectors = pencil.eigenvectors();
@@ -77,7 +80,7 @@ denseEigenpairs(const Schrodinger<Scalar> *self, Eigen::Index eigenvalueCount) {
 #define SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, withEigenfunctions) \
 template \
 std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> \
-denseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, Eigen::Index);
+denseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, const EigensolverOptions &);
 
 #define SCHRODINGER_INSTANTIATE(Scalar) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, false) \

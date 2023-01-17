@@ -21,7 +21,9 @@ TEST_CASE("Henon Heiles", "[henonheiles]") {
                     .maxBasisSize=N,
             });
 
-    checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(20), 1e-4);
+    checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(EigensolverOptions{
+            .k = 20
+    }), 1e-4);
 }
 
 
@@ -34,10 +36,12 @@ TEST_CASE("Sparse Henon Heiles", "[henonheiles][sparse]") {
             Options{
                     .gridSize={.x=n, .y=n},
                     .maxBasisSize=N,
-                    .sparse=true
             });
 
-    checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(20), 1e-4);
+    checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(EigensolverOptions{
+            .k = 20,
+            .sparse=true,
+    }), 1e-4);
 }
 
 

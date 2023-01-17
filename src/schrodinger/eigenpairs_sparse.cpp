@@ -295,11 +295,23 @@ public:
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>>
-sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool shiftInvert, double ncvFactor) {
+sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, const EigensolverOptions &options) {
     MATSLISE_SCOPED_TIMER("Sparse eigenpairs");
+    Eigen::Index n = schrodinger->intersections.size();
 
-    if (nev < 0)
-        nev = 10;
+    validate_argument([&]() {
+        return options.k > 0 && options.k < n;
+    }, [&](auto &message) {
+        message << "The number of eigenvalues k should be strictly positive and less than " << n << ".";
+    });
+    Eigen::Index ncv = options.ncv;
+    if (ncv < 0)
+        ncv = std::min(n, 2 * options.k + 1); // Take sufficient convergence vectors
+    validate_argument([&]() { return ncv >= options.k && ncv <= n; }, [&](auto &message) {
+        message << "The number of convergence vectors ncv should not be less than"
+                << " the requested number of eigenvalues (" << options.k << ") and at most " << n << ".";
+    });
+
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> MatrixXs;
     typedef Eigen::SparseMatrix<Scalar, Eigen::RowMajor> SparseMatrix;
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> VectorXs;
@@ -307,7 +319,6 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
     PermutedBeta<Scalar> Bx{schrodinger, xDirection};
     PermutedBeta<Scalar> By{schrodinger, yDirection};
 
-    Eigen::Index n = schrodinger->intersections.size();
     std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> result;
 
     SparseMatrix lstsq_x = Bx.lstsqMatrix();
@@ -424,17 +435,16 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
 #else
     // To do: make sure sigma is lower bound!
     Scalar sigma = -1;
-    Eigen::Index ncv = std::min((Eigen::Index) (ncvFactor * (double) nev) + 1, n);
 
     Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, 1> eigenvalues;
     Eigen::Matrix<std::complex<Scalar>, Eigen::Dynamic, Eigen::Dynamic> eigenvectors;
-    if (shiftInvert) {
+    if (options.shiftInvert) {
         MATSLISE_SCOPED_TIMER("SPECTRA shift invert");
 
         ShiftInvertDeflateSolveOperator<Scalar> op(Bx.fullMatrix() + By.fullMatrix());
         op.add_deflation(Bx.lstsqNullSpace());
         op.add_deflation(By.lstsqNullSpace());
-        Spectra::GenEigsRealShiftSolver<decltype(op)> eigenSolver(op, nev, ncv, sigma);
+        Spectra::GenEigsRealShiftSolver<decltype(op)> eigenSolver(op, options.k, ncv, sigma);
 
         {
             MATSLISE_SCOPED_TIMER("SPECTRA init");
@@ -457,7 +467,7 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
         ShiftDeflateSolveOperator<Scalar> op(Bx.fullMatrix() + By.fullMatrix(), sigma);
         op.add_deflation(Bx.lstsqNullSpace());
         op.add_deflation(By.lstsqNullSpace());
-        Spectra::GenEigsSolver<decltype(op)> eigenSolver(op, nev, ncv);
+        Spectra::GenEigsSolver<decltype(op)> eigenSolver(op, options.k, ncv);
 
         {
             MATSLISE_SCOPED_TIMER("SPECTRA init");
@@ -525,7 +535,7 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, Eigen::Index nev, bool 
 #define SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, withEigenfunctions) \
 template \
 std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> \
-sparseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, Eigen::Index, bool, double);
+sparseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, const EigensolverOptions&);
 
 #define SCHRODINGER_INSTANTIATE(Scalar) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, false) \

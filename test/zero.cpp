@@ -17,11 +17,13 @@ TEST_CASE("Zero potential on a disc", "[zero][disc]") {
     Schrodinger<double> s([](double, double) { return 0; },
                           Sphere<double, 2>({0, 0}, 1),
                           Options{
-                                    .gridSize={.x=40, .y=40},
-                                    .maxBasisSize=20
-                            });
+                                  .gridSize={.x=40, .y=40},
+                                  .maxBasisSize=20
+                          });
 
-    std::vector<double> eigenvalues = s.eigenvalues(10);
+    std::vector<double> eigenvalues = s.eigenvalues(EigensolverOptions{
+            .k = 10
+    });
     REQUIRE(eigenvalues.size() == 10);
     checkEigenvalues<double>(expected_on_disc, eigenvalues, 1);
 }
@@ -32,9 +34,9 @@ TEST_CASE("Zero potential eigenfunction", "[zero]") {
     Schrodinger<double> s([](double, double) { return 0; },
                           domain,
                           Options{
-                                    .gridSize={.x=30, .y=30},
-                                    .maxBasisSize=12
-                            });
+                                  .gridSize={.x=30, .y=30},
+                                  .maxBasisSize=12
+                          });
 
     int total = 0;
     std::map<int, std::vector<std::pair<int, int>>> sumOfSquares;
@@ -45,7 +47,9 @@ TEST_CASE("Zero potential eigenfunction", "[zero]") {
                 ++total;
             }
 
-    auto eigenfunctions = s.eigenfunctions(total);
+    auto eigenfunctions = s.eigenfunctions(EigensolverOptions{
+            .k = total
+    });
     REQUIRE((int) eigenfunctions.size() >= total);
     std::sort(eigenfunctions.begin(), eigenfunctions.end(), [](auto &a, auto &b) { return a.first < b.first; });
     eigenfunctions.erase(eigenfunctions.begin() + total, eigenfunctions.end());

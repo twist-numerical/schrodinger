@@ -5,11 +5,28 @@
 #include <Eigen/Core>
 #include <vector>
 #include <map>
+#include <stdexcept>
+#include <sstream>
 #include <optional>
 #include "domain.h"
 #include "util/polymorphic_value.h"
 
 namespace schrodinger {
+    template<class Assertion, class Message>
+    inline void validate_argument(Assertion toCheck, const Message &message) {
+#ifndef SCHRODINGER_NO_VALIDATE_ARGUMENTS
+        if (!toCheck()) {
+            if constexpr (std::is_invocable_v<Message, std::stringstream&>) {
+                std::stringstream r;
+                message(r);
+                throw std::invalid_argument(r.str());
+            } else {
+                throw std::invalid_argument(message);
+            }
+        }
+#endif
+    }
+
     template<class T>
     struct PerDirection {
         T x;
@@ -20,9 +37,13 @@ namespace schrodinger {
         PerDirection<int> gridSize = {.x=11, .y=11};
         int maxBasisSize = 22;
         double pencilThreshold = 1e-8;
+    };
+
+    struct EigensolverOptions {
+        Eigen::Index k = 10;
+        Eigen::Index ncv = -1;
         bool sparse = false;
         bool shiftInvert = true;
-        double ncvFactor = 4;
     };
 
     template<typename Scalar>
@@ -91,9 +112,10 @@ namespace schrodinger {
 
         PerDirection<VectorXs> Lambda() const;
 
-        std::vector<Scalar> eigenvalues(int eigenvaluesCount = -1) const;
+        std::vector<Scalar> eigenvalues(const EigensolverOptions &) const;
 
-        std::vector<std::pair<Scalar, std::unique_ptr<Eigenfunction>>> eigenfunctions(int eigenvaluesCount = -1) const;
+        std::vector<std::pair<Scalar, std::unique_ptr<Eigenfunction>>>
+        eigenfunctions(const EigensolverOptions &) const;
     };
 
     template<typename Scalar>

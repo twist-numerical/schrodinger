@@ -16,7 +16,9 @@ TEST_CASE("Harmonic potential", "[harmonic]") {
                                   .maxBasisSize=20
                           });
 
-    checkOrthogonality(domain, expected, s.eigenfunctions(expected.size()), 1e-4);
+    checkOrthogonality(domain, expected, s.eigenfunctions(EigensolverOptions{
+            .k = (Eigen::Index) expected.size()
+    }), 1e-4);
 }
 
 TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
@@ -26,10 +28,12 @@ TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
                           Options{
                                   .gridSize={.x=48, .y=48},
                                   .maxBasisSize=20,
-                                  .sparse=true
                           });
 
-    checkOrthogonality(domain, expected, s.eigenfunctions(expected.size()), 1e-4);
+    checkOrthogonality(domain, expected, s.eigenfunctions(EigensolverOptions{
+            .k = (Eigen::Index) expected.size(),
+            .sparse = true
+    }), 1e-4);
 }
 
 TEST_CASE("Sparse harmonic potential, large grid", "[harmonic][sparse][slow]") {
@@ -39,10 +43,13 @@ TEST_CASE("Sparse harmonic potential, large grid", "[harmonic][sparse][slow]") {
                           Options{
                                   .gridSize={.x=64, .y=64},
                                   .maxBasisSize=32,
-                                  .sparse=true
                           });
 
-    checkOrthogonality(domain, expected, s.eigenfunctions(expected.size()), 1e-4);
+    checkOrthogonality(domain, expected, s.eigenfunctions(EigensolverOptions{
+            .k = (Eigen::Index) expected.size(),
+            .ncv =  4 * (Eigen::Index) expected.size(),
+            .sparse = true
+    }), 1e-4);
 }
 
 #ifdef SCHRODINGER_LONG_DOUBLE
@@ -50,27 +57,31 @@ TEST_CASE("Sparse harmonic potential, large grid", "[harmonic][sparse][slow]") {
 TEST_CASE("Harmonic potential long double", "[harmonic][long double][sparse]") {
     typedef long double Scalar;
     Schrodinger<Scalar> s([](Scalar x, Scalar y) { return x * x + y * y; },
-                            Rectangle<Scalar, 2>{-8.0, 8.0, -8.0, 8.0},
-                            Options{
-                                    .gridSize={.x=50, .y=50},
-                                    .maxBasisSize=30,
-                            });
+                          Rectangle<Scalar, 2>{-8.0, 8.0, -8.0, 8.0},
+                          Options{
+                                  .gridSize={.x=50, .y=50},
+                                  .maxBasisSize=30,
+                          });
 
-    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(expected.size()), 1e-8);
+    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(EigensolverOptions{
+            .k = (Eigen::Index) expected.size(),
+    }), 1e-8);
 }
 
 TEST_CASE("Sparse harmonic potential long double", "[harmonic][long double][sparse]") {
     typedef long double Scalar;
     Schrodinger<Scalar> s([](Scalar x, Scalar y) { return x * x + y * y; },
-                            Rectangle<Scalar, 2>{-8.0, 8.0, -8.0, 8.0},
-                            Options{
-                                    .gridSize={.x=50, .y=50},
-                                    .maxBasisSize=30,
-                                    .sparse=true,
-                                    .shiftInvert=false
-                            });
+                          Rectangle<Scalar, 2>{-8.0, 8.0, -8.0, 8.0},
+                          Options{
+                                  .gridSize={.x=50, .y=50},
+                                  .maxBasisSize=30,
+                          });
 
-    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(expected.size()), 1e-8);
+    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(EigensolverOptions{
+            .k = (Eigen::Index) expected.size(),
+            .sparse=true,
+            .shiftInvert=false
+    }), 1e-8);
 }
 
 #endif

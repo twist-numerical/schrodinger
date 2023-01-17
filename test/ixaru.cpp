@@ -17,45 +17,53 @@ TEST_CASE("Ixaru potential vertical", "[ixaru]") {
     Schrodinger<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
                           Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
                           Options{
-                                    .gridSize={.x=28, .y=30},
-                                    .maxBasisSize=18
-                            });
+                                  .gridSize={.x=28, .y=30},
+                                  .maxBasisSize=18
+                          });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
+    checkEigenvalues<double>(expected, s.eigenvalues(EigensolverOptions{
+            .k = (Eigen::Index) expected.size()
+    }), 1e-4);
 }
 
 TEST_CASE("Ixaru potential horizontal", "[ixaru]") {
     Schrodinger<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
                           Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
                           Options{
-                                    .gridSize={.x=30, .y=28},
-                                    .maxBasisSize=18
-                            });
+                                  .gridSize={.x=30, .y=28},
+                                  .maxBasisSize=18
+                          });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
+    checkEigenvalues<double>(expected, s.eigenvalues(EigensolverOptions{
+            .k = (Eigen::Index) expected.size()
+    }), 1e-4);
 }
 
 TEST_CASE("Ixaru potential diamond", "[ixaru]") {
     Schrodinger<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
                           DomainTransform<double, 2>(Rectangle<double, 2>(-5.5, 5.5, -5.5, 5.5),
-                                                       Rotation2D<double>(M_PI / 2)),
+                                                     Rotation2D<double>(M_PI / 2)),
                           Options{
-                                    .gridSize={.x=30, .y=30},
-                                    .maxBasisSize=18
-                            });
+                                  .gridSize={.x=30, .y=30},
+                                  .maxBasisSize=18
+                          });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
+    checkEigenvalues<double>(expected, s.eigenvalues(EigensolverOptions{
+            .k = (Eigen::Index) expected.size()
+    }), 1e-4);
 }
 
 TEST_CASE("Ixaru potential disc", "[ixaru]") {
     Schrodinger<double> s([](double x, double y) { return (1 + x * x) * (1 + y * y); },
                           Sphere<double, 2>(5.5),
                           Options{
-                                    .gridSize={.x=30, .y=30},
-                                    .maxBasisSize=18
-                            });
+                                  .gridSize={.x=30, .y=30},
+                                  .maxBasisSize=18
+                          });
 
-    checkEigenvalues<double>(expected, s.eigenvalues(expected.size()), 1e-4);
+    checkEigenvalues<double>(expected, s.eigenvalues(EigensolverOptions{
+            .k = (Eigen::Index) expected.size()
+    }), 1e-4);
 }
 
 #ifdef SCHRODINGER_LONG_DOUBLE
@@ -63,13 +71,15 @@ TEST_CASE("Ixaru potential disc", "[ixaru]") {
 TEST_CASE("Ixaru potential long double", "[ixaru][long double]") {
     typedef long double Scalar;
     Schrodinger<Scalar> s([](Scalar x, Scalar y) { return (1 + x * x) * (1 + y * y); },
-                            Rectangle<Scalar, 2>(-5.5, 5.5, -5.5, 5.5),
-                            Options{
-                                    .gridSize={.x=35, .y=35},
-                                    .maxBasisSize=20
-                            });
+                          Rectangle<Scalar, 2>(-5.5, 5.5, -5.5, 5.5),
+                          Options{
+                                  .gridSize={.x=35, .y=35},
+                                  .maxBasisSize=20
+                          });
 
-    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(expected.size()), 1e-8);
+    checkEigenvalues<Scalar, double>(expected, s.eigenvalues(EigensolverOptions{
+            .k = (Eigen::Index) expected.size()
+    }), 1e-8);
 }
 
 #endif

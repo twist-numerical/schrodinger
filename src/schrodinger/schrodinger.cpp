@@ -282,14 +282,14 @@ Schrodinger<Scalar>::Lambda() const {
 
 
 template<typename Scalar>
-std::vector<Scalar> Schrodinger<Scalar>::eigenvalues(int eigenvalueCount) const {
-    return eigenpairs<Scalar, false>(this, eigenvalueCount);
+std::vector<Scalar> Schrodinger<Scalar>::eigenvalues(const EigensolverOptions &solverOptions) const {
+    return eigenpairs<Scalar, false>(this, solverOptions);
 }
 
 template<typename Scalar>
 std::vector<std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>>
-Schrodinger<Scalar>::eigenfunctions(int eigenvalueCount) const {
-    return eigenpairs<Scalar, true>(this, eigenvalueCount);
+Schrodinger<Scalar>::eigenfunctions(const EigensolverOptions &solverOptions) const {
+    return eigenpairs<Scalar, true>(this, solverOptions);
 }
 
 #include "instantiate.h"

@@ -69,23 +69,26 @@ PYBIND11_MODULE(schrodinger, m) {
     py::class_<Schrodinger<double>, std::shared_ptr<Schrodinger<double>>>(m, "Schrodinger2D")
             .def(py::init(
                          [](const std::function<double(double, double)> &V, const Domain<double, 2> &domain,
-                            const std::array<int, 2> &gridSize, int maxBasisSize, bool sparse, bool shiftInvert,
-                            int ncvFactor) {
+                            const std::array<int, 2> &gridSize, int maxBasisSize) {
                              py::gil_scoped_release release;
                              return std::make_shared<Schrodinger<double>>(V, domain, (Options) {
                                      .gridSize = {.x = gridSize[0], .y=gridSize[1]},
                                      .maxBasisSize=maxBasisSize,
-                                     .sparse=sparse,
-                                     .shiftInvert=shiftInvert,
-                                     .ncvFactor=ncvFactor,
                              });
                          }), py::arg("V"), py::arg("domain"), py::arg("gridSize") = std::array<int, 2>{21, 21},
-                 py::arg("maxBasisSize") = 16, py::arg("sparse") = true, py::arg("shiftInvert") = true,
-                 py::arg("ncvFactor") = 4)
-            .def("eigenvalues", [](std::shared_ptr<const Schrodinger<double>> s, int eigenvalueCount) {
-                py::gil_scoped_release release;
-                return s->eigenvalues(eigenvalueCount);
-            }, py::arg("k") = -1, R""""(\
+                 py::arg("maxBasisSize") = 16)
+            .def("eigenvalues", [](
+                         const std::shared_ptr<const Schrodinger<double>> &s,
+                         Eigen::Index eigenvalueCount, bool sparse, bool shiftInvert, Eigen::Index ncv) {
+                     py::gil_scoped_release release;
+                     return s->eigenvalues(EigensolverOptions{
+                             .k=eigenvalueCount,
+                             .ncv=ncv,
+                             .sparse=sparse,
+                             .shiftInvert=shiftInvert,
+                     });
+                 }, py::arg("k") = 10, py::arg("sparse") = true, py::arg("shiftInvert") = true,
+                 py::arg("ncv") = -1, R""""(\
 Calculate the first k eigenvalues.
 
 :param int k: minimal number of eigenvalues to find (default: 10).
@@ -101,24 +104,32 @@ array([ 2.,  5.,  5.,  8., 10., 10., 13., 13., 17.])
 )"""")
             .def("Beta", &Schrodinger<double>::Beta)
             .def("Lambda", &Schrodinger<double>::Lambda)
-            .def("eigenfunctions", [](std::shared_ptr<const Schrodinger<double>> s, int eigenvalueCount) {
-                std::vector<std::pair<double, std::unique_ptr<Schrodinger<double>::Eigenfunction>>> eigs;
-                {
-                    py::gil_scoped_release release;
-                    eigs = s->eigenfunctions(eigenvalueCount);
-                }
-                py::list r;
-                for (auto &ef: eigs) {
-                    py::tuple t(2);
-                    t[0] = ef.first;
-                    t[1] = (KeepAliveEigenfunction) {
-                            .eigenfunction = std::move(ef.second),
-                            .problem=s,
-                    };
-                    r.append(t);
-                }
-                return r;
-            }, py::arg("k") = -1, R""""(\
+            .def("eigenfunctions", [](
+                         const std::shared_ptr<const Schrodinger<double>> &s,
+                         Eigen::Index eigenvalueCount, bool sparse, bool shiftInvert, Eigen::Index ncv) {
+                     std::vector<std::pair<double, std::unique_ptr<Schrodinger<double>::Eigenfunction>>> eigs;
+                     {
+                         py::gil_scoped_release release;
+                         eigs = s->eigenfunctions(EigensolverOptions{
+                                 .k=eigenvalueCount,
+                                 .ncv=ncv,
+                                 .sparse=sparse,
+                                 .shiftInvert=shiftInvert,
+                         });
+                     }
+                     py::list r;
+                     for (auto &ef: eigs) {
+                         py::tuple t(2);
+                         t[0] = ef.first;
+                         t[1] = (KeepAliveEigenfunction) {
+                                 .eigenfunction = std::move(ef.second),
+                                 .problem=s,
+                         };
+                         r.append(t);
+                     }
+                     return r;
+                 }, py::arg("k") = 10, py::arg("sparse") = true, py::arg("shiftInvert") = true,
+                 py::arg("ncv") = -1, R""""(\
 Calculate the first k eigenvalues with corresponding eigenfunctions.
 
 :param int k: minimal number of eigenvalues (with eigenfunctions) to find (default: 10).
