@@ -4,7 +4,9 @@ using namespace schrodinger;
 using namespace schrodinger::geometry;
 
 const std::vector<double> expected{
-        2, 4, 4, 6, 6, 6, 8, 8, 8, 8, 10, 10, 10, 10, 10, 12, 12, 12, 12, 12, 12
+        2, 4, 4, 6, 6, 6, 8, 8, 8, 8, 10, 10, 10, 10, 10, 12, 12,
+        12, 12, 12, 12, 14, 14, 14, 14, 14, 14, 14, 16, 16, 16, 16, 16, 16,
+        16, 16, 18, 18, 18, 18, 18, 18, 18, 18, 18, 20, 20, 20, 20, 20, 20,
 };
 
 TEST_CASE("Harmonic potential", "[harmonic]") {
@@ -36,7 +38,7 @@ TEST_CASE("Sparse harmonic potential", "[harmonic][sparse]") {
     }), 1e-4);
 }
 
-TEST_CASE("Sparse harmonic potential, large grid", "[harmonic][sparse][slow]") {
+TEST_CASE("Sparse harmonic potential, large grid", "[harmonic][sparse]") {
     Rectangle<double, 2> domain{-9.5, 9.5, -9.5, 9.5};
     Schrodinger<double> s([](double x, double y) { return x * x + y * y; },
                           domain,
@@ -49,6 +51,40 @@ TEST_CASE("Sparse harmonic potential, large grid", "[harmonic][sparse][slow]") {
             .k = (Eigen::Index) expected.size(),
             .ncv =  4 * (Eigen::Index) expected.size(),
             .sparse = true
+    }), 1e-4);
+}
+
+TEST_CASE("Sparse harmonic potential, large grid, without shiftInvert", "[harmonic][sparse][no_invert]") {
+    Rectangle<double, 2> domain{-9.5, 9.5, -9.5, 9.5};
+    Schrodinger<double> s([](double x, double y) { return x * x + y * y; },
+                          domain,
+                          Options{
+                                  .gridSize={.x=64, .y=64},
+                                  .maxBasisSize=32,
+                          });
+
+    checkOrthogonality(domain, expected, s.eigenfunctions(EigensolverOptions{
+            .k = (Eigen::Index) expected.size(),
+            .ncv =  4 * (Eigen::Index) expected.size(),
+            .sparse = true,
+            .shiftInvert = false,
+    }), 1e-4);
+}
+
+TEST_CASE("Sparse harmonic potential on disc", "[harmonic][sparse][disc]") {
+    Sphere<double, 2> domain{9.5};
+    Schrodinger<double> s([](double x, double y) { return x * x + y * y; },
+                          domain,
+                          Options{
+                                  .gridSize={.x=64, .y=64},
+                                  .maxBasisSize=48,
+                          });
+
+    checkOrthogonality(domain, expected, s.eigenfunctions(EigensolverOptions{
+            .k = (Eigen::Index) expected.size(),
+            .ncv =  4 * (Eigen::Index) expected.size(),
+            .sparse = true,
+            .shiftInvert = true,
     }), 1e-4);
 }
 
