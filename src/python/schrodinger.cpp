@@ -79,16 +79,19 @@ PYBIND11_MODULE(schrodinger, m) {
                  py::arg("maxBasisSize") = 16)
             .def("eigenvalues", [](
                          const std::shared_ptr<const Schrodinger<double>> &s,
-                         Eigen::Index eigenvalueCount, bool sparse, bool shiftInvert, Eigen::Index ncv) {
+                         Eigen::Index eigenvalueCount, bool sparse, bool shiftInvert, Eigen::Index ncv,
+                         double tolerance, Eigen::Index maxIterations) {
                      py::gil_scoped_release release;
                      return s->eigenvalues(EigensolverOptions{
                              .k=eigenvalueCount,
                              .ncv=ncv,
                              .sparse=sparse,
                              .shiftInvert=shiftInvert,
+                             .tolerance=tolerance,
+                             .maxIterations=maxIterations
                      });
-                 }, py::arg("k") = 10, py::arg("sparse") = true, py::arg("shiftInvert") = true,
-                 py::arg("ncv") = -1, R""""(\
+                 }, py::arg("k") = 10, py::arg("sparse") = true, py::arg("shiftInvert") = true, py::arg("ncv") = -1,
+                 py::arg("tolerance") = 1e-10, py::arg("maxIterations") = 1000, R""""(\
 Calculate the first k eigenvalues.
 
 :param int k: minimal number of eigenvalues to find (default: 10).
@@ -106,7 +109,8 @@ array([ 2.,  5.,  5.,  8., 10., 10., 13., 13., 17.])
             .def("Lambda", &Schrodinger<double>::Lambda)
             .def("eigenfunctions", [](
                          const std::shared_ptr<const Schrodinger<double>> &s,
-                         Eigen::Index eigenvalueCount, bool sparse, bool shiftInvert, Eigen::Index ncv) {
+                         Eigen::Index eigenvalueCount, bool sparse, bool shiftInvert, Eigen::Index ncv,
+                         double tolerance, Eigen::Index maxIterations) {
                      std::vector<std::pair<double, std::unique_ptr<Schrodinger<double>::Eigenfunction>>> eigs;
                      {
                          py::gil_scoped_release release;
@@ -115,6 +119,8 @@ array([ 2.,  5.,  5.,  8., 10., 10., 13., 13., 17.])
                                  .ncv=ncv,
                                  .sparse=sparse,
                                  .shiftInvert=shiftInvert,
+                                 .tolerance=tolerance,
+                                 .maxIterations=maxIterations
                          });
                      }
                      py::list r;
@@ -128,8 +134,8 @@ array([ 2.,  5.,  5.,  8., 10., 10., 13., 13., 17.])
                          r.append(t);
                      }
                      return r;
-                 }, py::arg("k") = 10, py::arg("sparse") = true, py::arg("shiftInvert") = true,
-                 py::arg("ncv") = -1, R""""(\
+                 }, py::arg("k") = 10, py::arg("sparse") = true, py::arg("shiftInvert") = true, py::arg("ncv") = -1,
+                 py::arg("tolerance") = 1e-10, py::arg("maxIterations") = 1000, R""""(\
 Calculate the first k eigenvalues with corresponding eigenfunctions.
 
 :param int k: minimal number of eigenvalues (with eigenfunctions) to find (default: 10).

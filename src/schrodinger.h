@@ -16,7 +16,7 @@ namespace schrodinger {
     inline void validate_argument(Assertion toCheck, const Message &message) {
 #ifndef SCHRODINGER_NO_VALIDATE_ARGUMENTS
         if (!toCheck()) {
-            if constexpr (std::is_invocable_v<Message, std::stringstream&>) {
+            if constexpr (std::is_invocable_v<Message, std::stringstream &>) {
                 std::stringstream r;
                 message(r);
                 throw std::invalid_argument(r.str());
@@ -44,6 +44,8 @@ namespace schrodinger {
         Eigen::Index ncv = -1;
         bool sparse = false;
         bool shiftInvert = true;
+        double tolerance = 1e-10;
+        Eigen::Index maxIterations = 1000;
     };
 
     template<typename Scalar>

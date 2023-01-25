@@ -298,6 +298,7 @@ std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, st
 sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, const EigensolverOptions &options) {
     MATSLISE_SCOPED_TIMER("Sparse eigenpairs");
     Eigen::Index n = schrodinger->intersections.size();
+    Scalar tolerance = options.tolerance;
 
     validate_argument([&]() {
         return options.k > 0 && options.k < n;
@@ -453,7 +454,7 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, const EigensolverOption
 
         {
             MATSLISE_SCOPED_TIMER("SPECTRA compute");
-            eigenSolver.compute(Spectra::SortRule::LargestMagn, 1000, 1e-10, Spectra::SortRule::SmallestReal);
+            eigenSolver.compute(Spectra::SortRule::LargestMagn, options.maxIterations, tolerance, Spectra::SortRule::SmallestReal);
             eigenvalues = eigenSolver.eigenvalues();
             eigenvectors = eigenSolver.eigenvectors();
         }
@@ -482,7 +483,7 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, const EigensolverOption
                                                         return Eigen::NumTraits<Scalar>::infinity();
                                                     return r.real();
                                                 }
-                                        }, 1000, 1e-10, Spectra::SortRule::SmallestReal);
+                                        }, options.maxIterations, tolerance, Spectra::SortRule::SmallestReal);
             eigenvalues = eigenSolver.eigenvalues();
             eigenvalues.array() += sigma;
             eigenvectors = eigenSolver.eigenvectors();
