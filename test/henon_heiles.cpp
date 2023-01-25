@@ -45,6 +45,23 @@ TEST_CASE("Sparse Henon Heiles", "[henonheiles][sparse]") {
 }
 
 
+TEST_CASE("Sparse Henon Heiles 32", "[henonheiles][sparse]") {
+    Schrodinger<double> s(
+            [](double x, double y) { return x * x + y * y + sqrt(5) / 10 * (x * y * y - x * x * x / 3); },
+            Rectangle<double, 2>{-8.0, 8.0, -8.0, 8.0},
+            Options{
+                    .gridSize={.x=32, .y=32},
+                    .maxBasisSize=32,
+            });
+
+    checkEigenvalues<double>(referenceHenonHeiles, s.eigenvalues(EigensolverOptions{
+            .k = 32,
+            .sparse=true,
+            .shiftInvert=true,
+    }), 1e-4);
+}
+
+
 /*
 TEST_CASE("test_pencil", "") {
     MatrixXd A = MatrixXd::Zero(14, 16);

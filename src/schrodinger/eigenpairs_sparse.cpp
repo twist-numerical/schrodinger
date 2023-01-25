@@ -452,7 +452,6 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, const EigensolverOption
         }
 
         {
-
             MATSLISE_SCOPED_TIMER("SPECTRA compute");
             eigenSolver.compute(Spectra::SortRule::LargestMagn, 1000, 1e-10, Spectra::SortRule::SmallestReal);
             eigenvalues = eigenSolver.eigenvalues();
@@ -475,7 +474,6 @@ sparseEigenpairs(const Schrodinger<Scalar> *schrodinger, const EigensolverOption
         }
 
         {
-
             MATSLISE_SCOPED_TIMER("SPECTRA compute");
             eigenSolver.compute(Spectra::EigenvalueSorter<std::complex<Scalar>>
                                         {
