@@ -1,0 +1,9 @@
+name: Clear cache
+
+jobs:
+  clear_cache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: MyAlbum/purge-cache@v1
+        with:
+          debug: true
