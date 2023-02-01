@@ -1,13 +1,12 @@
-#ifndef SCHRODINGER2D_DOMAIN_H
-#define SCHRODINGER2D_DOMAIN_H
+#ifndef STRANDS_DOMAIN_H
+#define STRANDS_DOMAIN_H
 
 #include <array>
 #include <vector>
 #include <cmath>
-#include "util/polymorphic_value.h"
 #include "util/geometry.h"
 
-namespace schrodinger::geometry {
+namespace strands::geometry {
 
     template<class Scalar, int d>
     class Domain {
@@ -18,13 +17,18 @@ namespace schrodinger::geometry {
 
         virtual std::pair<Scalar, Scalar> bounds(const Vector<Scalar, d> &direction) const = 0;
 
-        virtual Domain *clone() const = 0;
-
         virtual ~Domain() {};
 
-        struct copy {
-            Domain *operator()(const Domain &t) const { return t.clone(); }
-        };
+        template<typename T>
+        static std::shared_ptr<Domain<Scalar, d>> as_ptr(T t) {
+            if constexpr (std::is_base_of_v<Domain<Scalar, d>, T>) {
+                return std::make_shared<T>(t);
+            } else if constexpr (std::is_convertible_v<T, std::shared_ptr<Domain<Scalar, d>>>) {
+                return t;
+            } else {
+                static_assert(!sizeof(T *)); // == static_assert(false)
+            }
+        }
     };
 
     template<class Scalar, int d>
@@ -32,14 +36,13 @@ namespace schrodinger::geometry {
     private:
         Eigen::Transform<Scalar, d, Eigen::Affine> transform;
         Eigen::Transform<Scalar, d, Eigen::Affine> invTransform;
-        isocpp_p0201::polymorphic_value<Domain<Scalar, d>> domain;
+        std::shared_ptr<const Domain<Scalar, d>> domain;
     public:
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
         template<class DomainType, class TransformType>
-        DomainTransform(const DomainType &domain_, const TransformType &transform_) {
-            domain = isocpp_p0201::polymorphic_value<Domain<Scalar, d>>(
-                    static_cast<Domain<Scalar, d> *>(domain_.clone()), typename Domain<Scalar, d>::copy{});
+        DomainTransform(DomainType domain_, const TransformType &transform_) {
+            domain = Domain<Scalar, 2>::as_ptr(domain_);
             transform = transform_;
             invTransform = transform.inverse();
         }
@@ -60,31 +63,20 @@ namespace schrodinger::geometry {
             std::tie(min, max) = domain->bounds(dir);
             return {min + shift, max + shift};
         }
-
-        virtual DomainTransform<Scalar, d> *clone() const override {
-            return new DomainTransform<Scalar, d>(*this);
-        };
-
     };
 
     template<class Scalar, int d>
     class Union : public Domain<Scalar, d> {
     public:
-        std::vector<isocpp_p0201::polymorphic_value<Domain<Scalar, d>>> subdomains;
+        std::vector<std::shared_ptr<Domain<Scalar, d>>> subdomains;
 
-        Union(const std::vector<const Domain<Scalar, d> *> &domains) {
-            for (auto &dom: domains) {
-                subdomains.push_back(isocpp_p0201::polymorphic_value<Domain<Scalar, d>>(
-                        static_cast<Domain<Scalar, d> *>(dom->clone()),
-                        typename Domain<Scalar, d>::copy{}));
-            }
+        Union(const std::vector<std::shared_ptr<Domain<Scalar, d>>> &domains) : subdomains(domains) {
         }
 
         template<class... Ts>
-        Union(const Ts &... ts) {
+        explicit Union(const Ts &... ts) {
             subdomains = {
-                    isocpp_p0201::polymorphic_value<Domain<Scalar, d>>(
-                            static_cast<Domain<Scalar, d> *>(ts.clone()), typename Domain<Scalar, d>::copy{})...
+                    Domain<Scalar, 2>::as_ptr(ts)...
             };
         }
 
@@ -139,10 +131,6 @@ namespace schrodinger::geometry {
 
             return {min, max};
         }
-
-        virtual Union<Scalar, d> *clone() const override {
-            return new Union<Scalar, d>(*this);
-        };
     };
 
     template<class Scalar, int d>
@@ -235,10 +223,6 @@ namespace schrodinger::geometry {
 
             return {min, max};
         }
-
-        virtual Rectangle *clone() const override {
-            return new Rectangle(*this);
-        };
     };
 
     template<class Scalar, int d>
@@ -280,13 +264,9 @@ namespace schrodinger::geometry {
             Scalar r = radius / std::sqrt(dd);
             return {c - r, c + r};
         }
-
-        virtual Sphere *clone() const override {
-            return new Sphere(*this);
-        };
     };
 
 }
 
 
-#endif //SCHRODINGER2D_DOMAIN_H
+#endif //STRANDS_DOMAIN_H

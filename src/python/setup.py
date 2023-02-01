@@ -3,8 +3,8 @@ from setuptools.command.build_ext import build_ext
 import os
 import shutil
 
-assert 'SCHRODINGER_LIBRARY' in os.environ, "SCHRODINGER_LIBRARY environment variable has to be set"
-library = os.environ['SCHRODINGER_LIBRARY']
+assert 'STRANDS_LIBRARY' in os.environ, "STRANDS_LIBRARY environment variable has to be set"
+library = os.environ['STRANDS_LIBRARY']
 print("Using: '%s'" % library)
 
 with open('description.md', 'rb') as f:
@@ -30,15 +30,15 @@ class CMakeBuild(build_ext):
 
 
 setup(
-    name="schrodinger",
-    version="${SCHRODINGER_VERSION}",
+    name="Strands",
+    version="${STRANDS_VERSION}",
     author="Toon Baeyens",
     author_email="toon.baeyens@ugent.be",
     description="Solving the schrodinger-equation",
     long_description=long_description,
     long_description_content_type='text/markdown',
     url="https://matslise.ugent.be/",
-    ext_modules=[CMakeExtension('schrodinger')],
+    ext_modules=[CMakeExtension('strands')],
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
 )

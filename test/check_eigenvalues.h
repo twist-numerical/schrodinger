@@ -1,5 +1,5 @@
-#ifndef SCHRODINGER2D_SCHRODINGER_H
-#define SCHRODINGER2D_SCHRODINGER_H
+#ifndef STRANDS_CHECK_EIGENVALUES_H
+#define STRANDS_CHECK_EIGENVALUES_H
 
 #include "catch.hpp"
 #include "../src/schrodinger.h"
@@ -18,9 +18,9 @@ checkEigenvalues(const std::vector<T> &expected,
 
 template<typename Scalar, typename T=Scalar>
 inline void checkOrthogonality(
-        const schrodinger::geometry::Domain<Scalar, 2> &domain,
+        const strands::geometry::Domain<Scalar, 2> &domain,
         const std::vector<T> &expected,
-        const std::vector<std::pair<Scalar, std::unique_ptr<typename schrodinger::Schrodinger<Scalar>::Eigenfunction>>> &found,
+        const std::vector<std::pair<Scalar, std::unique_ptr<typename strands::Schrodinger<Scalar>::Eigenfunction>>> &found,
         Scalar tolerance = 1e-8) {
     std::vector<Scalar> calculatedValues;
     calculatedValues.reserve(found.size());
@@ -68,7 +68,7 @@ inline void checkOrthogonality(
 
 template<typename Scalar, typename Eigenfunction>
 inline void checkEigenpairs(
-        const schrodinger::geometry::Domain<Scalar, 2> &domain,
+        const strands::geometry::Domain<Scalar, 2> &domain,
         const std::vector<std::pair<Scalar, std::vector<std::function<Scalar(Scalar, Scalar)>>>> &expected,
         const std::vector<std::pair<Scalar, std::unique_ptr<Eigenfunction>>> &found, Scalar tolerance = 1e-8
 ) {
@@ -148,4 +148,4 @@ inline void checkEigenpairs(
     REQUIRE(errors.maxCoeff() < tolerance);
 }
 
-#endif //SCHRODINGER2D_SCHRODINGER_H
+#endif //STRANDS_CHECK_EIGENVALUES_H

@@ -21,7 +21,7 @@ inline PetscErrorCode kernelStoppingCondition(
 
 template<>
 Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>
-schrodinger::internal::sparseRightKernel<double>(
+strands::internal::sparseRightKernel<double>(
         const Eigen::SparseMatrix<double, Eigen::RowMajor> &eigenA, double threshold) {
     SLEPcMatrix A{eigenA};
     ((void) threshold);

@@ -1,11 +1,11 @@
-#ifndef SCHRODINGER2D_RIGHT_KERNEL_H
-#define SCHRODINGER2D_RIGHT_KERNEL_H
+#ifndef STRANDS_RIGHT_KERNEL_H
+#define STRANDS_RIGHT_KERNEL_H
 
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <Eigen/SparseQR>
 
-namespace schrodinger::internal {
+namespace strands::internal {
 
     template<typename Derived>
     Eigen::Matrix<typename Eigen::MatrixBase<Derived>::Scalar,
@@ -76,11 +76,11 @@ namespace schrodinger::internal {
 */
     }
 
-#ifdef SCHRODINGER_SLEPC
+#ifdef STRANDS_SLEPC
     template<typename Scalar>
     Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>
     sparseRightKernel(const Eigen::SparseMatrix<Scalar, Eigen::RowMajor> &eigenA, Scalar threshold = -1);
 #endif
 }
 
-#endif //SCHRODINGER2D_RIGHT_KERNEL_H
+#endif //STRANDS_RIGHT_KERNEL_H

@@ -1,5 +1,5 @@
-#ifndef SCHRODINGER2D_SCHRODINGER2D_H
-#define SCHRODINGER2D_SCHRODINGER2D_H
+#ifndef STRANDS_SCHRODINGER_H
+#define STRANDS_SCHRODINGER_H
 
 #include <matslise/matslise.h>
 #include <Eigen/Core>
@@ -9,12 +9,11 @@
 #include <sstream>
 #include <optional>
 #include "domain.h"
-#include "util/polymorphic_value.h"
 
-namespace schrodinger {
+namespace strands {
     template<class Assertion, class Message>
     inline void validate_argument(Assertion toCheck, const Message &message) {
-#ifndef SCHRODINGER_NO_VALIDATE_ARGUMENTS
+#ifndef STRANDS_NO_VALIDATE_ARGUMENTS
         if (!toCheck()) {
             if constexpr (std::is_invocable_v<Message, std::stringstream &>) {
                 std::stringstream r;
@@ -99,16 +98,22 @@ namespace schrodinger {
         PerDirection<size_t> columns;
 
         std::function<Scalar(Scalar, Scalar)> V;
-        isocpp_p0201::polymorphic_value<geometry::Domain<Scalar, 2>> domain;
+        std::shared_ptr<geometry::Domain<Scalar, 2>> domain;
         Options options;
 
         Schrodinger(const Schrodinger &) = delete;
 
         Schrodinger &operator=(const Schrodinger &) = delete;
 
-        Schrodinger(const std::function<Scalar(Scalar, Scalar)> &V,
-                    const geometry::Domain<Scalar, 2> &_domain,
-                    const Options &options = Options());
+        Schrodinger(std::function<Scalar(Scalar, Scalar)> V,
+                    std::shared_ptr<geometry::Domain<Scalar, 2>> _domain,
+                    Options options = Options());
+
+        template<typename DomainType>
+        Schrodinger(std::function<Scalar(Scalar, Scalar)> V,
+                    DomainType _domain,
+                    Options options = Options()) :
+                Schrodinger(std::move(V), geometry::Domain<Scalar, 2>::as_ptr(_domain), std::move(options)) {}
 
         PerDirection<MatrixXs> Beta() const;
 
@@ -142,4 +147,4 @@ namespace schrodinger {
     };
 }
 
-#endif //SCHRODINGER2D_SCHRODINGER2D_H
+#endif //STRANDS_SCHRODINGER_H

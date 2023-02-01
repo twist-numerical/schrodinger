@@ -1,8 +1,8 @@
-#include "schrodinger.h"
+#include "check_eigenvalues.h"
 
 using namespace Eigen;
-using namespace schrodinger;
-using namespace schrodinger::geometry;
+using namespace strands;
+using namespace strands::geometry;
 
 const std::vector<double> expected{
         3.1959180863164467, 5.526743874681427, 5.526743875458036,
@@ -66,7 +66,7 @@ TEST_CASE("Ixaru potential disc", "[ixaru]") {
     }), 1e-4);
 }
 
-#ifdef SCHRODINGER_LONG_DOUBLE
+#ifdef STRANDS_LONG_DOUBLE
 
 TEST_CASE("Ixaru potential long double", "[ixaru][long double]") {
     typedef long double Scalar;

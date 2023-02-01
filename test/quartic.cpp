@@ -1,8 +1,8 @@
-#include "schrodinger.h"
+#include "check_eigenvalues.h"
 
 using namespace Eigen;
-using namespace schrodinger;
-using namespace schrodinger::geometry;
+using namespace strands;
+using namespace strands::geometry;
 
 template<typename Scalar>
 struct QuarticOscillator {

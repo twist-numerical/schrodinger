@@ -1,7 +1,7 @@
-#include "schrodinger.h"
+#include "check_eigenvalues.h"
 
-using namespace schrodinger;
-using namespace schrodinger::geometry;
+using namespace strands;
+using namespace strands::geometry;
 
 const std::vector<double> expected{
         2, 4, 4, 6, 6, 6, 8, 8, 8, 8, 10, 10, 10, 10, 10, 12, 12,
@@ -88,7 +88,7 @@ TEST_CASE("Sparse harmonic potential on disc", "[harmonic][sparse][disc]") {
     }), 1e-4);
 }
 
-#ifdef SCHRODINGER_LONG_DOUBLE
+#ifdef STRANDS_LONG_DOUBLE
 
 TEST_CASE("Harmonic potential long double", "[harmonic][long double][sparse]") {
     typedef long double Scalar;

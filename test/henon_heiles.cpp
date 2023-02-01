@@ -1,8 +1,8 @@
-#include "schrodinger.h"
+#include "check_eigenvalues.h"
 
 using namespace Eigen;
-using namespace schrodinger;
-using namespace schrodinger::geometry;
+using namespace strands;
+using namespace strands::geometry;
 
 std::vector<double> referenceHenonHeiles{
         2 * 0.998594690530479, 2 * 1.99007660445524, 2 * 1.99007660445524, 2 * 2.95624333869018,

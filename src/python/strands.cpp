@@ -9,8 +9,8 @@
 #include "../schrodinger.h"
 
 namespace py = pybind11;
-using namespace schrodinger;
-using namespace schrodinger::geometry;
+using namespace strands;
+using namespace strands::geometry;
 
 
 template<typename T>
@@ -20,14 +20,14 @@ void perDirection(const py::handle &scope, const std::string &name) {
             .def_readonly("y", &PerDirection<T>::y);
 }
 
-PYBIND11_MODULE(schrodinger, m) {
+PYBIND11_MODULE(strands, m) {
 
     struct KeepAliveEigenfunction {
         std::unique_ptr<Schrodinger<double>::Eigenfunction> eigenfunction;
         std::shared_ptr<const Schrodinger<double>> problem;
     };
 
-    py::class_<Domain<double, 2>>
+    py::class_<Domain<double, 2>, std::shared_ptr<Domain<double, 2>>>
             (m, "Domain2D")
             .def("contains", &Domain<double, 2>::contains)
             .def("intersections",
@@ -36,22 +36,23 @@ PYBIND11_MODULE(schrodinger, m) {
                  })
             .def("bounds", &Domain<double, 2>::bounds);
 
-    py::class_<Rectangle<double, 2>, Domain<double, 2 >>(m, "Rectangle")
+    py::class_<Rectangle<double, 2>, Domain<double, 2>, std::shared_ptr<Rectangle<double, 2>>>(m, "Rectangle")
             .def(py::init<double, double, double, double>());
 
-    py::class_<Sphere<double, 2>, Domain<double, 2 >>(m, "Circle")
+    py::class_<Sphere<double, 2>, Domain<double, 2>, std::shared_ptr<Sphere<double, 2>>>(m, "Circle")
             .def(py::init<double>())
             .def(py::init<Vector<double, 2>>())
             .def(py::init<Vector<double, 2>, double>());
 
-    py::class_<Union<double, 2>, Domain<double, 2 >>(m, "Union")
-            .def(py::init<const std::vector<const Domain<double, 2> *> &>());
+    py::class_<Union<double, 2>, Domain<double, 2>, std::shared_ptr<Union<double, 2>>>(m, "Union")
+            .def(py::init<const std::vector<std::shared_ptr<Domain<double, 2>>> &>());
 
-    py::class_<DomainTransform<double, 2>, Domain<double, 2 >>(m, "DomainTransform")
-            .def(py::init([](const Domain<double, 2> &domain, const Eigen::Matrix3d &transform) {
+    py::class_<DomainTransform<double, 2>, Domain<double, 2>, std::shared_ptr<DomainTransform<double, 2>>>(m,
+                                                                                                           "DomainTransform")
+            .def(py::init([](const std::shared_ptr<Domain<double, 2>> &domain, const Eigen::Matrix3d &transform) {
                 Eigen::Affine2d t;
                 t.matrix() = transform;
-                return new DomainTransform<double, 2>(domain, t);
+                return std::make_shared<DomainTransform<double, 2>>(domain, t);
             }), py::arg("domain"), py::arg("transformation"));
 
     py::class_<KeepAliveEigenfunction>(m, "Eigenfunction2D")
@@ -68,7 +69,8 @@ PYBIND11_MODULE(schrodinger, m) {
 
     py::class_<Schrodinger<double>, std::shared_ptr<Schrodinger<double>>>(m, "Schrodinger2D")
             .def(py::init(
-                         [](const std::function<double(double, double)> &V, const Domain<double, 2> &domain,
+                         [](const std::function<double(double, double)> &V,
+                            const std::shared_ptr<Domain<double, 2>> &domain,
                             const std::array<int, 2> &gridSize, int maxBasisSize) {
                              py::gil_scoped_release release;
                              return std::make_shared<Schrodinger<double>>(V, domain, (Options) {

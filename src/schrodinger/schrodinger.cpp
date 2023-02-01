@@ -1,4 +1,3 @@
-#include "../util/polymorphic_value.h"
 #include "../schrodinger.h"
 #include "./eigenpairs.h"
 #include <map>
@@ -7,9 +6,8 @@
 using namespace std;
 using namespace matslise;
 using namespace Eigen;
-using namespace isocpp_p0201;
-using namespace schrodinger;
-using namespace schrodinger::geometry;
+using namespace strands;
+using namespace strands::geometry;
 
 template<typename T>
 struct IterateEigen {
@@ -73,11 +71,10 @@ internal_linspaced(Index size, const Domain<Scalar, 2> *domain, const Matrix<Sca
 }
 
 template<typename Scalar>
-Schrodinger<Scalar>::Schrodinger(const function<Scalar(Scalar, Scalar)> &V_,
-                                 const Domain<Scalar, 2> &_domain,
-                                 const Options &_options)
-        : V(V_), domain(polymorphic_value<Domain<Scalar, 2>>(_domain.clone(), typename Domain<Scalar, 2>::copy{})),
-          options(_options) {
+Schrodinger<Scalar>::Schrodinger(function<Scalar(Scalar, Scalar)> V_,
+                                 std::shared_ptr<Domain<Scalar, 2>> domain_,
+                                 Options options_)
+        : V(std::move(V_)), domain(domain_), options(std::move(options_)) {
     grid.x = internal_linspaced<Scalar>(options.gridSize.x, &*domain, Matrix<Scalar, 2, 1>::Unit(0));
     grid.y = internal_linspaced<Scalar>(options.gridSize.y, &*domain, Matrix<Scalar, 2, 1>::Unit(1));
 

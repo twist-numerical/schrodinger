@@ -1,11 +1,11 @@
-#include "schrodinger.h"
+#include "check_eigenvalues.h"
 #include <map>
 #include <tuple>
 #include <vector>
 
 using namespace Eigen;
-using namespace schrodinger;
-using namespace schrodinger::geometry;
+using namespace strands;
+using namespace strands::geometry;
 
 const std::vector<double> expected_on_disc{
         5.783185962946589, 14.681970642123728, 14.681970642123728, 26.374616427163247,

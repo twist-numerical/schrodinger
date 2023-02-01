@@ -1,9 +1,9 @@
-#ifndef SCHRODINGER2D_GEOMETRY_H
-#define SCHRODINGER2D_GEOMETRY_H
+#ifndef STRANDS_GEOMETRY_H
+#define STRANDS_GEOMETRY_H
 
 #include <Eigen/Dense>
 
-namespace schrodinger::geometry {
+namespace strands::geometry {
 
     template<typename Scalar, int d>
     using Vector = Eigen::Matrix<Scalar, d, 1>;
@@ -36,4 +36,4 @@ namespace schrodinger::geometry {
 
 }
 
-#endif //SCHRODINGER2D_GEOMETRY_H
+#endif //STRANDS_GEOMETRY_H

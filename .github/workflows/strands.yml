@@ -1,10 +1,10 @@
-name: Build and test schrodinger
+name: Build and test strands
 
 on: [ push ]
 
 jobs:
-  schrodinger_test:
-    name: Test schrodinger
+  strands_test:
+    name: Test strands
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -42,10 +42,10 @@ jobs:
           cmake -G "MinGW Makefiles" `
             -DCMAKE_BUILD_TYPE=Release `
             -DEigen3_DIR="$(resolve-path ../../eigen/build)" `
-            -DSCHRODINGER_LONG_DOUBLE=ON `
-            -DSCHRODINGER_PYTHON=OFF `
+            -DSTRANDS_LONG_DOUBLE=ON `
+            -DSTRANDS_PYTHON=OFF `
             ..
-          cmake --build . --target schrodinger_test --config Release
+          cmake --build . --target strands_test --config Release
         working-directory: ./build
         env:
           CXXFLAGS: "-DMS_WIN64=1 -D_hypot=hypot -static-libgcc -static"
@@ -55,16 +55,16 @@ jobs:
         run: |
           cmake .. -DCMAKE_BUILD_TYPE=Release \
             -DEigen3_DIR="$(pwd)/../../eigen/build" \
-            -DSCHRODINGER_LONG_DOUBLE=ON \
-            -DSCHRODINGER_PYTHON=OFF
-          cmake --build . --target schrodinger_test --config Release -- -j 3
+            -DSTRANDS_LONG_DOUBLE=ON \
+            -DSTRANDS_PYTHON=OFF
+          cmake --build . --target strands_test --config Release -- -j 3
         working-directory: ./build
       - name: Run tests
         run: |
-          ./schrodinger_test
+          ./strands_test
         working-directory: ./build
 
-  schrodinger_python_test:
+  strands_python_test:
     name: Test python bindings
     runs-on: ${{ matrix.os }}
     strategy:
@@ -112,10 +112,10 @@ jobs:
           cmake -G "MinGW Makefiles" `
             -DCMAKE_BUILD_TYPE=Release `
             -DEigen3_DIR="$(resolve-path ../../eigen/build)" `
-            -DSCHRODINGER_LONG_DOUBLE=OFF `
-            -DSCHRODINGER_PYTHON=ON `
+            -DSTRANDS_LONG_DOUBLE=OFF `
+            -DSTRANDS_PYTHON=ON `
             ..
-          cmake --build . --target install_schrodinger_py --config Release
+          cmake --build . --target install_strands_py --config Release
         working-directory: ./build
         env:
           CXXFLAGS: "-DMS_WIN64=1 -D_hypot=hypot -static-libgcc -static"
@@ -125,9 +125,9 @@ jobs:
         run: |
           cmake .. -DCMAKE_BUILD_TYPE=Release \
             -DEigen3_DIR="$(pwd)/../../eigen/build" \
-            -DSCHRODINGER_LONG_DOUBLE=OFF \
-            -DSCHRODINGER_PYTHON=ON
-          cmake --build . --target install_schrodinger_py --config Release -- -j 3
+            -DSTRANDS_LONG_DOUBLE=OFF \
+            -DSTRANDS_PYTHON=ON
+          cmake --build . --target install_strands_py --config Release -- -j 3
         working-directory: ./build
       - name: Test installation
         run: |

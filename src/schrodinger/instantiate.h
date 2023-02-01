@@ -1,17 +1,19 @@
 #include "../schrodinger.h"
 
-#ifndef SCHRODINGER_INSTANTIATE
-#define SCHRODINGER_INSTANTIATE(Scalar)
+#ifndef STRANDS_INSTANTIATE
+#define STRANDS_INSTANTIATE(Scalar)
 #endif
 
 template
-class schrodinger::Schrodinger<double>;
+class strands::Schrodinger<double>;
 
-SCHRODINGER_INSTANTIATE(double)
+STRANDS_INSTANTIATE(double)
 
-#ifdef SCHRODINGER_LONG_DOUBLE
+#ifdef STRANDS_LONG_DOUBLE
 
 template
-class schrodinger::Schrodinger<long double>;
-SCHRODINGER_INSTANTIATE(long double)
+class strands::Schrodinger<long double>;
+
+STRANDS_INSTANTIATE(long double)
+
 #endif

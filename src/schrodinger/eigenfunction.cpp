@@ -1,13 +1,10 @@
-#include "../util/polymorphic_value.h"
 #include "../schrodinger.h"
-#include "../util/rectangular_pencil.h"
-#include <chrono>
+#include "../util/geometry.h"
 
 using namespace std;
 using namespace matslise;
 using namespace Eigen;
-using namespace isocpp_p0201;
-using namespace schrodinger;
+using namespace strands;
 
 template<typename Scalar>
 const Eigen::Array<Scalar,
@@ -29,7 +26,7 @@ Array<Scalar, Rows, 1>
 reconstructEigenfunction(const typename Schrodinger<Scalar>::Thread *t, const Ref<const Array<Scalar, Dynamic, 1>> &c,
                          const Array<Scalar, Rows, 1> &v) {
     Array<Scalar, Rows, 1> r = Array<Scalar, Rows, 1>::Zero();
-    for (size_t i = 0; i < t->eigenpairs.size(); ++i)
+    for (decltype(t->eigenpairs.size()) i = 0; i < t->eigenpairs.size(); ++i)
         r += c(t->offset + i) * (*t->eigenpairs[i].second)(v).col(0);
     return r;
 }
@@ -201,7 +198,7 @@ Scalar Schrodinger<Scalar>::Eigenfunction::operator()(Scalar x, Scalar y) const 
 template<typename Scalar>
 Eigen::Array<Scalar, Eigen::Dynamic, 1>
 Schrodinger<Scalar>::Eigenfunction::operator()(ArrayXs xs, ArrayXs ys) const {
-    assert(xs.size() == ys.size());
+    validate_argument([&]() { return xs.size() == ys.size(); }, "x and y lists should have the same length.");
 
     ArrayXs result = ArrayXs::Zero(xs.size());
 

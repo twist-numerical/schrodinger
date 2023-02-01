@@ -4,7 +4,7 @@
 #include "../util/right_kernel.h"
 #include "../util/rectangular_pencil.h"
 
-using namespace schrodinger;
+using namespace strands;
 
 template<typename Scalar, bool withEigenfunctions>
 std::vector<typename std::conditional_t<withEigenfunctions, std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>>
@@ -23,7 +23,7 @@ denseEigenpairs(const Schrodinger<Scalar> *self, const EigensolverOptions &optio
     MatrixXs crossingsMatch(rows, colsX + colsY);
     crossingsMatch << beta.x, -beta.y;
 
-    kernel = schrodinger::internal::rightKernel<MatrixXs>(crossingsMatch, 1e-6);
+    kernel = strands::internal::rightKernel<MatrixXs>(crossingsMatch, 1e-6);
     // std::cout << "Dense: " << (crossingsMatch * kernel).cwiseAbs().rowwise().sum().maxCoeff() << std::endl;
 
     A = beta.x * lambda.x.asDiagonal() * kernel.topRows(colsX) +
@@ -33,7 +33,7 @@ denseEigenpairs(const Schrodinger<Scalar> *self, const EigensolverOptions &optio
          ? beta.y * kernel.bottomRows(colsY)
          : beta.x * kernel.topRows(colsX);
 
-    RectangularPencil<withEigenfunctions, MatrixXs> pencil(A, BK, self->options.pencilThreshold);
+    strands::internal::RectangularPencil<withEigenfunctions, MatrixXs> pencil(A, BK, self->options.pencilThreshold);
 
     const auto &values = pencil.eigenvalues();
     validate_argument([&]() {
@@ -51,7 +51,7 @@ denseEigenpairs(const Schrodinger<Scalar> *self, const EigensolverOptions &optio
     });
     indices.resize(options.k);
 
-    if constexpr(withEigenfunctions) {
+    if constexpr (withEigenfunctions) {
         const auto &vectors = pencil.eigenvectors();
 
         typedef std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>> Eigenpair;
@@ -82,7 +82,7 @@ template \
 std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> \
 denseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, const EigensolverOptions &);
 
-#define SCHRODINGER_INSTANTIATE(Scalar) \
+#define STRANDS_INSTANTIATE(Scalar) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, false) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, true)
 

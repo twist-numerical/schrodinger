@@ -4,7 +4,7 @@
 #include <numeric>
 #include "../util/right_kernel.h"
 
-using namespace schrodinger;
+using namespace strands;
 
 struct DirectionGetter {
     bool getX;
@@ -149,7 +149,7 @@ public:
         {
             Eigen::Index i = 0;
             for (auto &block: leastSquares) {
-                nullBlocks.emplace_back(schrodinger::internal::rightKernel(block, 1e-8));
+                nullBlocks.emplace_back(strands::internal::rightKernel(block, 1e-8));
                 nullCols += nullBlocks.back().cols();
                 toReserve.middleRows(i, block.cols()) = Eigen::VectorXi::Constant(block.cols(),
                                                                                   nullBlocks.back().cols());
@@ -536,7 +536,7 @@ template \
 std::vector<typename std::conditional_t<(withEigenfunctions), std::pair<Scalar, std::unique_ptr<typename Schrodinger<Scalar>::Eigenfunction>>, Scalar>> \
 sparseEigenpairs<Scalar, withEigenfunctions>(const Schrodinger<Scalar> *, const EigensolverOptions&);
 
-#define SCHRODINGER_INSTANTIATE(Scalar) \
+#define STRANDS_INSTANTIATE(Scalar) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, false) \
 SCHRODINGER_INSTANTIATE_EIGENPAIRS(Scalar, true)
 
