@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Cache Eigen3
         id: cache-eigen3_3
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ../eigen
           key: ${{ runner.os }}-eigen3_3
@@ -75,7 +75,7 @@ jobs:
     steps:
       - name: Cache Eigen3
         id: cache-eigen3_3
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ../eigen
           key: ${{ runner.os }}-eigen3_3
