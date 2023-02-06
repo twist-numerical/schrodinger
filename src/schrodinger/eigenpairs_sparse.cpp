@@ -223,7 +223,7 @@ public:
         Vector x1, x2;
         x1 = v;
         for (auto &U: deflations) {
-            MATSLISE_SCOPED_TIMER("SPECTRA deflate forward");
+            MATSLISE_SCOPED_TIMER("SPECTRA deflate");
             x2.noalias() = U.transpose() * x1;
             x1.noalias() -= U * x2;
         }

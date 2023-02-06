@@ -4,7 +4,7 @@ using namespace Eigen;
 using namespace strands;
 using namespace strands::geometry;
 
-std::vector<double> referenceHenonHeiles{
+inline std::vector<double> referenceHenonHeiles{
         2 * 0.998594690530479, 2 * 1.99007660445524, 2 * 1.99007660445524, 2 * 2.95624333869018,
         2 * 2.98532593386986, 2 * 2.98532593386986, 2 * 3.92596412795287, 2 * 3.92596412795287,
         2 * 3.98241882458866, 2 * 3.98575763690663, 2 * 4.87014557482289, 2 * 4.89864497284387, 2 * 4.89864497284387
@@ -60,7 +60,6 @@ TEST_CASE("Sparse Henon Heiles 32", "[henonheiles][sparse]") {
             .shiftInvert=true,
     }), 1e-4);
 }
-
 
 /*
 TEST_CASE("test_pencil", "") {

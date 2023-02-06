@@ -22,8 +22,11 @@ add_library(strands ${STRANDS_SRC})
 
 set(defines "")
 
-# SET(PROFILE ON)
-# add_compile_definitions(MATSLISE_PROFILING)
+OPTION(STRANDS_PROFILING "Compile with profiling information." OFF)
+if (STRANDS_PROFILING)
+    SET(MATSLISE_PROFILING ON)
+ENDIF (STRANDS_PROFILING)
+SET(MATSLISE_PROFILE ON)
 SET(MATSLISE_STATIC ON)
 SET(MATSLISE_MATSCS OFF)
 SET(MATSLISE_2D OFF)
@@ -73,6 +76,7 @@ add_executable(strands_test
         test/ixaru.cpp
         test/quartic.cpp
         test/henon_heiles.cpp
+        test/profile_henon_heiles.cpp
         test/main.cpp
         )
 
@@ -103,7 +107,7 @@ if (STRANDS_PYTHON)
         configure_file(src/python/description.md description.md NEWLINE_STYLE LF)
 
         add_custom_target(install_strands_py
-                COMMAND ${CMAKE_COMMAND} -E env STRANDS_LIBRARY="$<TARGET_FILE:strands_py>"
+                COMMAND ${CMAKE_COMMAND} -E env STRANDS_LIBRARY= "$<TARGET_FILE:strands_py>"
                 ${PYTHON_EXECUTABLE} -m pip install --upgrade --ignore-installed .
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         add_dependencies(install_strands_py strands_py)

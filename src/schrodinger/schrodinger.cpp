@@ -31,6 +31,7 @@ template<typename Scalar>
 typename Schrodinger<Scalar>::Thread
 computeThread(const std::function<Scalar(Scalar)> &V, Scalar min, Scalar max, size_t maxPairs,
               const Ref<const Array<Scalar, Dynamic, 1>> &grid, size_t &offset) {
+    MATSLISE_SCOPED_TIMER("Schrodinger::computeThread");
     typedef IterateEigen<const Ref<const Array<Scalar, Dynamic, 1>>> Iterate;
 
     const Scalar *from = std::lower_bound(Iterate(grid).begin(), Iterate(grid).end(), min);
@@ -75,6 +76,8 @@ Schrodinger<Scalar>::Schrodinger(function<Scalar(Scalar, Scalar)> V_,
                                  std::shared_ptr<Domain<Scalar, 2>> domain_,
                                  Options options_)
         : V(std::move(V_)), domain(domain_), options(std::move(options_)) {
+    MATSLISE_SCOPED_TIMER("Schrodinger::Schrodinger");
+
     grid.x = internal_linspaced<Scalar>(options.gridSize.x, &*domain, Matrix<Scalar, 2, 1>::Unit(0));
     grid.y = internal_linspaced<Scalar>(options.gridSize.y, &*domain, Matrix<Scalar, 2, 1>::Unit(1));
 
