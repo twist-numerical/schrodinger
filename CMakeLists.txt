@@ -107,7 +107,7 @@ if (STRANDS_PYTHON)
         configure_file(src/python/description.md description.md NEWLINE_STYLE LF)
 
         add_custom_target(install_strands_py
-                COMMAND ${CMAKE_COMMAND} -E env STRANDS_LIBRARY= "$<TARGET_FILE:strands_py>"
+                COMMAND ${CMAKE_COMMAND} -E env STRANDS_LIBRARY="$<TARGET_FILE:strands_py>"
                 ${PYTHON_EXECUTABLE} -m pip install --upgrade --ignore-installed .
                 WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
         add_dependencies(install_strands_py strands_py)
