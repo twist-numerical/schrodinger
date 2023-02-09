@@ -32,9 +32,9 @@ jobs:
         name: Build Eigen3 (not Windows)
         run: cmake ..
         working-directory: ../eigen/build
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
       - run: mkdir build
       - if: ${{startsWith(matrix.os, 'windows')}}
         name: CMake (Windows)
@@ -99,12 +99,9 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install setuptools wheel numpy # For the doctests numpy should be installed
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - uses: actions/checkout@v2
-        with:
-          submodules: true
       - run: mkdir build
       - if: ${{startsWith(matrix.os, 'windows')}}
         name: CMake (Windows)

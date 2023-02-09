@@ -1,6 +1,6 @@
 name: Build wheels
 
-on: [push, pull_request]
+on: "workflow_dispatch"
 
 jobs:
   build_wheels:
@@ -12,6 +12,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       # Used to host cibuildwheel
       - uses: actions/setup-python@v3
