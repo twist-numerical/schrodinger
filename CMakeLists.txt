@@ -7,8 +7,14 @@ set(STRANDS_VERSION "0.0.1")
 
 set(CMAKE_CXX_STANDARD 17)
 
-# -fPIC needed for pybind
-set(BUILD_SHARED_LIBS ON)
+
+Include(FetchContent)
+FetchContent_Declare(
+        eigen
+        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+        GIT_TAG 3.4.0
+)
+FetchContent_MakeAvailable(eigen)
 
 if (MSVC)
     add_compile_options(/W4 /WX)
@@ -95,11 +101,30 @@ if (STRANDS_PYTHON)
         find_package(pybind11 QUIET)
     endif ()
 
+    if(CALL_FROM_SETUP_PY)
+        # The CMakeExtension will set CMAKE_INSTALL_PREFIX to the root
+        # of the resulting wheel archive
+        set(STRANDS_PY_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
+    else()
+        # The Python package is installed directly in the folder of the
+        # detected interpreter (system, user, or virtualenv)
+        set(STRANDS_PY_INSTALL_PREFIX ${Python3_SITELIB})
+    endif()
+
     if (pybind11_FOUND)
         message("Adding strands_py")
         pybind11_add_module(strands_py MODULE src/python/strands.cpp ${STRANDS_SRC})
         target_link_libraries(strands_py PRIVATE ${libraries})
         target_compile_definitions(strands_py PUBLIC ${defines})
+        set_target_properties(strands_py PROPERTIES
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/strands
+            OUTPUT_NAME "strands")
+        install(
+            TARGETS strands_py
+            COMPONENT strands_py
+            LIBRARY DESTINATION ${STRANDS_PY_INSTALL_PREFIX}
+            ARCHIVE DESTINATION ${STRANDS_PY_INSTALL_PREFIX}
+            RUNTIME DESTINATION ${STRANDS_PY_INSTALL_PREFIX})
         message("-- pybind: ${pybind11_VERSION}")
         message("-- python: ${PYTHON_EXECUTABLE}")
 
