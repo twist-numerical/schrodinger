@@ -35,6 +35,9 @@ if "CIBUILDWHEEL" in os.environ and os.environ["CIBUILDWHEEL"] == "1":
 # most of the package metadata. However, build extensions are not supported and must be
 # configured in the setup.py.
 setuptools.setup(
+    name="Strands",
+    version="0.1.0",
+    author="Toon Baeyens",
     ext_modules=[
         cmake_build_extension.CMakeExtension(
             name="Strands",
@@ -56,7 +59,6 @@ setuptools.setup(
                 # This option points CMake to the right Python interpreter, and helps
                 # the logic of FindPython3.cmake to find the active version
                 f"-DPYTHON_EXECUTABLE={Path(sys.executable)}",
-                "-DCALL_FROM_SETUP_PY:BOOL=ON",
                 "-DBUILD_SHARED_LIBS:BOOL=OFF",
             ]
             + CIBW_CMAKE_OPTIONS,

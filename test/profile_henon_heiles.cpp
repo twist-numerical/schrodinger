@@ -11,7 +11,7 @@ inline std::vector<double> referenceHenonHeiles{
 };
 
 template<typename T, typename... Args>
-T timedConstructor(const std::string &profile_name, Args... args) {
+T timedConstructor([[maybe_unused]]  const std::string &profile_name, Args... args) {
     MATSLISE_SCOPED_TIMER(profile_name);
     return T(args...);
 }
@@ -27,7 +27,7 @@ TEST_CASE("Profile sparse Henon Heiles", "[henonheiles][sparse][profile]") {
                     .maxBasisSize=48,
             });
 
-    std::vector<double>eigenvalues;
+    std::vector<double> eigenvalues;
     {
         MATSLISE_SCOPED_TIMER("calculate eigenvalues");
         eigenvalues = s.eigenvalues(EigensolverOptions{
@@ -54,7 +54,7 @@ TEST_CASE("Profile sparse Henon Heiles (shiftInvert)", "[henonheiles][sparse][pr
                     .maxBasisSize=48,
             });
 
-    std::vector<double>eigenvalues;
+    std::vector<double> eigenvalues;
     {
         MATSLISE_SCOPED_TIMER("calculate eigenvalues");
         eigenvalues = s.eigenvalues(EigensolverOptions{
