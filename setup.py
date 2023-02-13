@@ -48,6 +48,7 @@ setuptools.setup(
                 # the logic of FindPython3.cmake to find the active version
                 f"-DPYTHON_EXECUTABLE={Path(sys.executable)}",
                 "-DBUILD_SHARED_LIBS:BOOL=OFF",
+                "-DSTRANDS_TESTS:BOOL=OFF",
             ]
             + CIBW_CMAKE_OPTIONS,
             cmake_component="strands_py"

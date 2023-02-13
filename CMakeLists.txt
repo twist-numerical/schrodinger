@@ -76,21 +76,24 @@ include_directories(lib/spectra/include)
 target_link_libraries(strands PUBLIC ${libraries})
 target_compile_definitions(strands PUBLIC ${defines})
 
-add_executable(strands_test
-        test/zero.cpp
-        test/harmonic.cpp
-        test/ixaru.cpp
-        test/quartic.cpp
-        test/henon_heiles.cpp
-        test/profile_henon_heiles.cpp
-        test/main.cpp
-        )
+OPTION(STRANDS_TESTS "Also build the python bindings" ON)
+if (STRANDS_TESTS)
+    add_executable(strands_test
+            test/zero.cpp
+            test/harmonic.cpp
+            test/ixaru.cpp
+            test/quartic.cpp
+            test/henon_heiles.cpp
+            test/profile_henon_heiles.cpp
+            test/main.cpp
+            )
 
-target_link_libraries(strands_test PRIVATE strands)
-add_dependencies(strands_test strands)
+    target_link_libraries(strands_test PRIVATE strands)
+    add_dependencies(strands_test strands)
 
-enable_testing()
-add_test(NAME strands_test COMMAND strands_test)
+    enable_testing()
+    add_test(NAME strands_test COMMAND strands_test)
+endif ()
 
 
 OPTION(STRANDS_PYTHON "Also build the python bindings" ON)
