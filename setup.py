@@ -7,20 +7,8 @@ from pathlib import Path
 import cmake_build_extension
 import setuptools
 
-# Importing the bindings inside the build_extension_env context manager is necessary only
-# in Windows with Python>=3.8.
-# See https://github.com/diegoferigo/cmake-build-extension/issues/8.
-# Note that if this manager is used in the init file, cmake-build-extension becomes an
-# install_requires that must be added to the setup.cfg. Otherwise, cmake-build-extension
-# could only be listed as build-system requires in pyproject.toml since it would only
-# be necessary for packaging and not during runtime.
-init_py = inspect.cleandoc(
-    """
-    import cmake_build_extension
-    with cmake_build_extension.build_extension_env():
-        from .strands import *
-    """
-)
+with open(os.path.join(os.path.dirname(__file__), "src", "python", "__init__.py")) as init_file:
+    init_py = init_file.read()
 
 # Extra options passed to the CI/CD pipeline that uses cibuildwheel
 CIBW_CMAKE_OPTIONS = []
