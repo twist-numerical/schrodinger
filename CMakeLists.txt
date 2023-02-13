@@ -108,7 +108,7 @@ if (STRANDS_PYTHON)
         message("Adding strands_py")
         pybind11_add_module(strands_py MODULE src/python/strands.cpp ${STRANDS_SRC})
         target_link_libraries(strands_py PRIVATE ${libraries})
-        target_compile_definitions(strands_py PUBLIC ${defines})
+        target_compile_definitions(strands_py PUBLIC ${defines} _hypot=hypot)
         set_target_properties(strands_py PROPERTIES
                 LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/strands
                 OUTPUT_NAME "strands")
