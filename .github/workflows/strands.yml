@@ -98,34 +98,11 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install setuptools wheel numpy # For the doctests numpy should be installed
       - uses: actions/checkout@v3
         with:
           submodules: recursive
-      - run: mkdir build
-      - if: ${{startsWith(matrix.os, 'windows')}}
-        name: CMake (Windows)
-        run: |
-          cmake -G "MinGW Makefiles" `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DEigen3_DIR="$(resolve-path ../../eigen/build)" `
-            -DSTRANDS_LONG_DOUBLE=OFF `
-            -DSTRANDS_PYTHON=ON `
-            ..
-          cmake --build . --target install_strands_py --config Release
-        working-directory: ./build
-        env:
-          CXXFLAGS: "-DMS_WIN64=1 -D_hypot=hypot -static-libgcc -static"
-          LDFLAGS: "-static -Wl,--allow-multiple-definition"
-      - if: ${{!startsWith(matrix.os, 'windows')}}
-        name: CMake (not Windows)
-        run: |
-          cmake .. -DCMAKE_BUILD_TYPE=Release \
-            -DEigen3_DIR="$(pwd)/../../eigen/build" \
-            -DSTRANDS_LONG_DOUBLE=OFF \
-            -DSTRANDS_PYTHON=ON
-          cmake --build . --target install_strands_py --config Release -- -j 3
-        working-directory: ./build
+      - name: pip install
+        run: pip install .
       - name: Test installation
         run: |
           python test/python/test_docs.py
