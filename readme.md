@@ -31,7 +31,7 @@ from strands import Schrodinger2D , Circle
 def V(x, y):
     return x * x + y * y
 
-schrodinger = Schrodinger2D(V, Circle ((0, 0), 9.5), gridSize = ( 40 , 40 ), maxBasisSize = 30)
+schrodinger = Schrodinger2D(V, Circle ((0, 0), 9.5), gridSize=(40, 40), maxBasisSize=30)
 print(schrodinger.eigenvalues(10))
 ```
 
@@ -42,9 +42,9 @@ Eigenfunctions can be computed with:
 import matplotlib.pyplot as plt
 import numpy as np
 
-xs = np.linspace ( -4 , 4 , 100 )
-ys = np.linspace ( -4 , 4 , 100 )
-X, Y = np.meshgrid ( xs , ys )
+xs = np.linspace(-4, 4, 100)
+ys = np.linspace(-4, 4, 100)
+X, Y = np.meshgrid(xs, ys)
 
 for E, f in schrodinger.eigenfunctions(3):
     plt.pcolormesh(X, Y, f(X, Y))
