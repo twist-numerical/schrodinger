@@ -61,7 +61,7 @@ jobs:
         working-directory: ./build
       - name: Run tests
         run: |
-          ./strands_test
+          ./strands_test --durations yes
         working-directory: ./build
 
   strands_python_test:

@@ -62,7 +62,7 @@ cd strands
 To compile and run the tests the following can be used:
 ```sh
 mkdir build && cd build
-cmake -DSTRANDS_PYTHON=OFF ..  # Build without python
-cmake --build . --config release --target strands_test
+cmake -DCMAKE_BUILD_TYPE=Release -DSTRANDS_PYTHON=OFF ..  # Build without python
+cmake --build . --target strands_test
 ./strands_test --durations yes
 ```
