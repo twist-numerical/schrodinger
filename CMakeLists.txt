@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
-cmake_minimum_required(VERSION 3.13)
 project(strands LANGUAGES CXX)
 cmake_policy(SET CMP0077 NEW)
-
-set(STRANDS_VERSION "0.0.1")
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -78,6 +75,13 @@ target_compile_definitions(strands PUBLIC ${defines})
 
 OPTION(STRANDS_TESTS "Also build the python bindings" ON)
 if (STRANDS_TESTS)
+    FetchContent_Declare(
+            Catch2
+            GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+            GIT_TAG v3.3.1 # or a later release
+    )
+    FetchContent_MakeAvailable(Catch2)
+
     add_executable(strands_test
             test/zero.cpp
             test/harmonic.cpp
@@ -85,10 +89,9 @@ if (STRANDS_TESTS)
             test/quartic.cpp
             test/henon_heiles.cpp
             test/profile_henon_heiles.cpp
-            test/main.cpp
             )
 
-    target_link_libraries(strands_test PRIVATE strands)
+    target_link_libraries(strands_test PRIVATE strands Catch2::Catch2WithMain)
     add_dependencies(strands_test strands)
 
     enable_testing()
@@ -120,8 +123,6 @@ if (STRANDS_PYTHON)
                 RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX})
         message("-- pybind: ${pybind11_VERSION}")
         message("-- python: ${PYTHON_EXECUTABLE}")
-
-        configure_file(src/python/description.md description.md NEWLINE_STYLE LF)
 
         file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build_strands_py")
         add_custom_target(install_strands_py
