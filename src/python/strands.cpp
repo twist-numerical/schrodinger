@@ -59,9 +59,20 @@ PYBIND11_MODULE(strands, m) {
             .def("__call__", [](const KeepAliveEigenfunction &f, double x, double y) {
                 return (*f.eigenfunction)(x, y);
             })
-            .def("__call__", [](const KeepAliveEigenfunction &f, Schrodinger<double>::ArrayXs xs,
-                                Schrodinger<double>::ArrayXs ys) {
+            .def("__call__", [](const KeepAliveEigenfunction &f,
+                                Eigen::ArrayXd xs, Eigen::ArrayXd ys) -> Eigen::ArrayXd {
+                validate_argument([&]() { return xs.size() == ys.size(); }, [&](auto &s) {
+                    s << "Vectors should have the same length: " << xs.size() << " != " << ys.size();
+                });
                 return (*f.eigenfunction)(xs, ys);
+            })
+            .def("__call__", [](const KeepAliveEigenfunction &f,
+                                Eigen::ArrayXXd xs, Eigen::ArrayXXd ys) -> Eigen::ArrayXXd {
+                validate_argument([&]() { return xs.rows() == ys.rows() && xs.cols() == ys.cols(); }, [&](auto &s) {
+                    s << "Matrices should have the same sizes: "
+                      << xs.rows() << " x " << xs.cols() << " != " << ys.rows() << " x " << ys.cols();
+                });
+                return (*f.eigenfunction)(xs.reshaped(), ys.reshaped()).reshaped(xs.rows(), xs.cols());
             });
 
     perDirection<Schrodinger<double>::MatrixXs>(m, "PerDirectionMatrixXs");
@@ -73,10 +84,11 @@ PYBIND11_MODULE(strands, m) {
                             const std::shared_ptr<Domain<double, 2>> &domain,
                             const std::array<int, 2> &gridSize, int maxBasisSize) {
                              py::gil_scoped_release release;
-                             return std::make_shared<Schrodinger<double>>(V, domain, (Options) {
-                                     .gridSize = {.x = gridSize[0], .y=gridSize[1]},
-                                     .maxBasisSize=maxBasisSize,
-                             });
+                             return std::make_shared<Schrodinger<double>>
+                                     (V, domain, (Options) {
+                                             .gridSize = {.x = gridSize[0], .y=gridSize[1]},
+                                             .maxBasisSize=maxBasisSize,
+                                     });
                          }), py::arg("V"), py::arg("domain"), py::arg("gridSize") = std::array<int, 2>{21, 21},
                  py::arg("maxBasisSize") = 16)
             .def("eigenvalues", [](

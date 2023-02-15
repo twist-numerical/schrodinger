@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
-cmake_minimum_required(VERSION 3.13)
 project(strands LANGUAGES CXX)
 cmake_policy(SET CMP0077 NEW)
-
-set(STRANDS_VERSION "0.0.1")
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -76,21 +73,30 @@ include_directories(lib/spectra/include)
 target_link_libraries(strands PUBLIC ${libraries})
 target_compile_definitions(strands PUBLIC ${defines})
 
-add_executable(strands_test
-        test/zero.cpp
-        test/harmonic.cpp
-        test/ixaru.cpp
-        test/quartic.cpp
-        test/henon_heiles.cpp
-        test/profile_henon_heiles.cpp
-        test/main.cpp
-        )
+OPTION(STRANDS_TESTS "Also build the python bindings" ON)
+if (STRANDS_TESTS)
+    FetchContent_Declare(
+            Catch2
+            GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+            GIT_TAG v3.3.1 # or a later release
+    )
+    FetchContent_MakeAvailable(Catch2)
 
-target_link_libraries(strands_test PRIVATE strands)
-add_dependencies(strands_test strands)
+    add_executable(strands_test
+            test/zero.cpp
+            test/harmonic.cpp
+            test/ixaru.cpp
+            test/quartic.cpp
+            test/henon_heiles.cpp
+            test/profile_henon_heiles.cpp
+            )
 
-enable_testing()
-add_test(NAME strands_test COMMAND strands_test)
+    target_link_libraries(strands_test PRIVATE strands Catch2::Catch2WithMain)
+    add_dependencies(strands_test strands)
+
+    enable_testing()
+    add_test(NAME strands_test COMMAND strands_test)
+endif ()
 
 
 OPTION(STRANDS_PYTHON "Also build the python bindings" ON)
@@ -101,41 +107,28 @@ if (STRANDS_PYTHON)
         find_package(pybind11 QUIET)
     endif ()
 
-    if(CALL_FROM_SETUP_PY)
-        # The CMakeExtension will set CMAKE_INSTALL_PREFIX to the root
-        # of the resulting wheel archive
-        set(STRANDS_PY_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX})
-    else()
-        # The Python package is installed directly in the folder of the
-        # detected interpreter (system, user, or virtualenv)
-        set(STRANDS_PY_INSTALL_PREFIX ${Python3_SITELIB})
-    endif()
-
     if (pybind11_FOUND)
         message("Adding strands_py")
         pybind11_add_module(strands_py MODULE src/python/strands.cpp ${STRANDS_SRC})
         target_link_libraries(strands_py PRIVATE ${libraries})
-        target_compile_definitions(strands_py PUBLIC ${defines})
+        target_compile_definitions(strands_py PUBLIC ${defines} _hypot=hypot)
         set_target_properties(strands_py PROPERTIES
-            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/strands
-            OUTPUT_NAME "strands")
+                LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/strands
+                OUTPUT_NAME "strands")
         install(
-            TARGETS strands_py
-            COMPONENT strands_py
-            LIBRARY DESTINATION ${STRANDS_PY_INSTALL_PREFIX}
-            ARCHIVE DESTINATION ${STRANDS_PY_INSTALL_PREFIX}
-            RUNTIME DESTINATION ${STRANDS_PY_INSTALL_PREFIX})
+                TARGETS strands_py
+                COMPONENT strands_py
+                LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}
+                ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}
+                RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX})
         message("-- pybind: ${pybind11_VERSION}")
         message("-- python: ${PYTHON_EXECUTABLE}")
 
-        configure_file(src/python/setup.py setup.py NEWLINE_STYLE LF)
-        configure_file(src/python/description.md description.md NEWLINE_STYLE LF)
-
+        file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build_strands_py")
         add_custom_target(install_strands_py
-                COMMAND ${CMAKE_COMMAND} -E env STRANDS_LIBRARY="$<TARGET_FILE:strands_py>"
-                ${PYTHON_EXECUTABLE} -m pip install --upgrade --ignore-installed .
-                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-        add_dependencies(install_strands_py strands_py)
+                COMMAND "${PYTHON_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/setup.py" bdist_wheel && pip uninstall --yes strands && pip install dist/*.whl
+                WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/build_strands_py"
+                )
     else ()
         message("To enable python bindings, make sure pybind11 is available in /lib/pybind11. Or disable the python bindings with -DSTRANDS_PYTHON=OFF")
     endif ()

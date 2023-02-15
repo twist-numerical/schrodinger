@@ -1,11 +1,13 @@
 #ifndef STRANDS_CHECK_EIGENVALUES_H
 #define STRANDS_CHECK_EIGENVALUES_H
 
-#include "catch.hpp"
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/catch_approx.hpp>
+using Catch::Approx;
 #include "../src/schrodinger.h"
 #include <vector>
 
-template<typename Scalar, typename T=Scalar>
+template<typename Scalar, typename T=Scalar >
 inline void
 checkEigenvalues(const std::vector<T> &expected,
                  const std::vector<Scalar> &found, Scalar tolerance = 1e-8) {
